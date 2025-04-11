@@ -1,0 +1,8 @@
+venv
+.idea
+.env
+.python-version
+data/
+*.ipynb
+*__pycache__*
+*.pyc
