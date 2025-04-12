@@ -98,7 +98,7 @@ def get_train_test_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.
     df = df[(df['Modified_Z_Score'] < 3) & (df['Modified_Z_Score'] > -3)]
     df = df.drop(['Modified_Z_Score', 'loggiasCount'], axis=1)
     df.reset_index(drop=True, inplace=True)
-    df.to_csv('./data/model/prepared_dataset.csv')
+    df.to_csv('./data/model/prepared_dataset.csv', index=False)
     X = df.drop("price_by_meter", axis=1)
     Y = df["price_by_meter"]
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.1, random_state=42)
