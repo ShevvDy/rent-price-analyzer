@@ -17,9 +17,9 @@ def build_models() -> None:
         joblib.dump(data_name_map[obj_name], f"./data/model/{obj_name}_data.pkl")
 
     rf = RandomForestRegressor(
-        n_estimators=400,
-        max_depth=22,
-        max_features=8,
+        n_estimators=200,
+        max_depth=25,
+        max_features=9,
         n_jobs=-1,
         random_state=42,
     )
@@ -27,10 +27,10 @@ def build_models() -> None:
     joblib.dump(rf, "./data/model/rf_model.pkl")
 
     xgb = XGBRegressor(
-        max_depth=8,
-        learning_rate=0.09,
-        n_estimators=700,
-        reg_alpha=8,
+        max_depth=7,
+        learning_rate=0.08,
+        n_estimators=300,
+        reg_alpha=11,
         random_state=42,
         n_jobs=-1
     )

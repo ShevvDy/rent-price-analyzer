@@ -6,9 +6,12 @@ import joblib
 import pandas as pd
 import numpy as np
 from dadata import Dadata
+from dotenv import load_dotenv
 
 from ..data_process import add_poi_distances, find_nearest_metro, haversine
 
+
+load_dotenv()
 
 with open('./data/spb/underground.json', 'r', encoding='utf-8') as f:
     metro_data = json.load(f)
@@ -66,13 +69,13 @@ def get_rental_price(data: dict) -> dict:
 
     # 3. Частотное кодирование
     for col in ["city", "district", "underground_name", 'building_material']:
-        encoder = joblib.load(f"./staff_data/{col}_encoder.pkl")
+        encoder = joblib.load(f"./data/model/{col}_encoder.pkl")
         df[col + "_encoded"] = encoder.transform(df[col])
         df = df.drop(col, axis=1)
         df[col + "_encoded"] = df[col + "_encoded"].fillna(0.0)
 
-    model = joblib.load("./staff_data/xgb_model.pkl")
-    X_train = joblib.load("./staff_data/x_train_data.pkl")
+    model = joblib.load("./data/model/xgb_model.pkl")
+    X_train = joblib.load("./data/model/x_train_data.pkl")
     df = df[X_train.columns]
     prediction = model.predict(df)
     return {'status': 'success', 'price_by_meter': float(prediction[0]), 'total_price': int(round(prediction[0] * flat_area))}

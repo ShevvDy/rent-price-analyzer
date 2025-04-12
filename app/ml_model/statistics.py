@@ -28,11 +28,11 @@ def print_metrics(y_true: pd.Series, y_predicted: pd.Series, model):
         n_jobs=-1,
     )
 
-    print(f"\nКросс-валидация RMSE: {-scores.mean():.2f} ± {scores.std():.2f}")
+    print(f"Кросс-валидация RMSE: {-scores.mean():.2f} ± {scores.std():.2f}\n")
 
 
 def get_statistics_by_model(model_name: str = 'xgb', is_test: bool = True) -> None:
-    model = joblib.load(f"./staff_data/{model_name}_model.pkl")
+    model = joblib.load(f"./data/model/{model_name}_model.pkl")
     X = X_test if is_test else X_train
     Y = Y_test if is_test else Y_train
     y_pred = model.predict(X)
