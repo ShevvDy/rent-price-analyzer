@@ -18,17 +18,17 @@ def print_metrics(y_true: pd.Series, y_predicted: pd.Series, model):
     print(f"RMSE: {np.sqrt(mean_squared_error(y_true, y_predicted)):.2f}")
     print(f"R²: {r2_score(y_true, y_predicted):.4f}")
 
-    cv = KFold(n_splits=5, shuffle=True, random_state=42)
-    scores = cross_val_score(
-        model,
-        X_train,
-        Y_train.values.ravel(),
-        cv=cv,
-        scoring="neg_root_mean_squared_error",
-        n_jobs=-1,
-    )
+    # cv = KFold(n_splits=5, shuffle=True, random_state=42)
+    # scores = cross_val_score(
+    #     model,
+    #     X_train,
+    #     Y_train.values.ravel(),
+    #     cv=cv,
+    #     scoring="neg_root_mean_squared_error",
+    #     n_jobs=-1,
+    # )
 
-    print(f"Кросс-валидация RMSE: {-scores.mean():.2f} ± {scores.std():.2f}\n")
+    # print(f"Кросс-валидация RMSE: {-scores.mean():.2f} ± {scores.std():.2f}\n")
 
 
 def get_statistics_by_model(model_name: str = 'xgb', is_test: bool = True) -> None:

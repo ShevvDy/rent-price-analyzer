@@ -18,8 +18,8 @@ def build_models() -> None:
 
     rf = RandomForestRegressor(
         n_estimators=200,
-        max_depth=25,
-        max_features=9,
+        max_depth=23,
+        max_features=7,
         n_jobs=-1,
         random_state=42,
     )
@@ -27,10 +27,10 @@ def build_models() -> None:
     joblib.dump(rf, "./data/model/rf_model.pkl")
 
     xgb = XGBRegressor(
-        max_depth=7,
+        max_depth=8,
         learning_rate=0.08,
         n_estimators=300,
-        reg_alpha=11,
+        reg_alpha=8,
         random_state=42,
         n_jobs=-1
     )

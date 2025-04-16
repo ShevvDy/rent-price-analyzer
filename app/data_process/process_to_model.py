@@ -93,7 +93,7 @@ def get_train_test_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.
     df["building_material"] = df["building_material"].replace(material_mapping)
     df['balconiesCount'] = df['balconiesCount'] + df['loggiasCount']
     counts = df.groupby('district')['district'].transform('size')
-    df = df[counts > 15]
+    df = df[counts > 10]
     df = df.groupby(['city', 'district']).apply(calculate_groupwise_zscore)
     df = df[(df['Modified_Z_Score'] < 3) & (df['Modified_Z_Score'] > -3)]
     df = df.drop(['Modified_Z_Score', 'loggiasCount'], axis=1)
