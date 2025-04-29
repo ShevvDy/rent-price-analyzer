@@ -1,36 +1,23 @@
 import json
-import os
 from datetime import datetime
 
 import joblib
 import pandas as pd
 import numpy as np
-from dadata import Dadata
-from dotenv import load_dotenv
 
-from ..data_process import add_poi_distances, find_nearest_metro, haversine
+from ..data_process import add_poi_distances, find_nearest_metro, get_metro_df_by_city, haversine
+from ..util.address import get_address_info
 
-
-load_dotenv()
 
 with open('./data/spb/underground.json', 'r', encoding='utf-8') as f:
     metro_data = json.load(f)
 
 
-def get_dadata_info_by_address(address: str) -> tuple[str, str, float, float] | None:
-    dadata_ = Dadata(os.getenv('DADATA_TOKEN'), os.getenv('DADATA_SECRET'))
-    addr_info = dadata_.clean('address', address)
-    if addr_info['qc_geo'] != 0:
-        return None
-    return addr_info['region'], addr_info['settlement'] or addr_info['city_district'], float(addr_info['geo_lat']), float(addr_info['geo_lon'])
-
-
 def get_rental_price(data: dict) -> dict:
-    addr_data = get_dadata_info_by_address(data['address'])
+    addr_data = get_address_info(data['address'])
     if addr_data is None:
         raise Exception(f'Address {data["address"]} not found')
-    data['city'] = addr_data[0]
-    data['district'] = addr_data[1]
+    data['city_district'] = f"{addr_data[0]}, {addr_data[1]}"
     data['latitude'] = addr_data[2]
     data['longitude'] = addr_data[3]
     data['addedTimestamp'] = datetime.now().timestamp()
@@ -42,12 +29,13 @@ def get_rental_price(data: dict) -> dict:
         df[col] = df[col].astype(int)
 
     df['underground_name'] = np.nan
-    df["underground_name"] = df.apply(lambda x: find_nearest_metro(x), axis=1)
+    metro_df = get_metro_df_by_city('spb')
+    df["underground_name"] = df.apply(lambda x: find_nearest_metro(x, metro_df), axis=1)
     df['underground_lat'] = df['underground_name'].map(lambda x: metro_data[x][0])
     df['underground_lon'] = df['underground_name'].map(lambda x: metro_data[x][1])
-    parks = pd.read_csv('./data/spb/spb_parks.csv')
-    schools = pd.read_csv('./data/spb/spb_schools.csv')
-    malls = pd.read_csv('./data/spb/spb_malls.csv')
+    parks = pd.read_csv('./data/spb/parks.csv')
+    schools = pd.read_csv('./data/spb/schools.csv')
+    malls = pd.read_csv('./data/spb/malls.csv')
     df = add_poi_distances(df, parks, 'park')
     df = add_poi_distances(df, schools, 'school')
     df = add_poi_distances(df, malls, 'mall')
@@ -68,14 +56,15 @@ def get_rental_price(data: dict) -> dict:
     df = df.drop(['underground_lat', 'underground_lon', "latitude", "longitude", 'address'], axis=1)
 
     # 3. Частотное кодирование
-    for col in ["city", "district", "underground_name", 'building_material']:
+    for col in ['city_district', 'building_material']:
         encoder = joblib.load(f"./data/model/{col}_encoder.pkl")
         df[col + "_encoded"] = encoder.transform(df[col])
         df = df.drop(col, axis=1)
         df[col + "_encoded"] = df[col + "_encoded"].fillna(0.0)
 
-    model = joblib.load("./data/model/xgb_model.pkl")
+    model = joblib.load("./data/model/rf_model.pkl")
     X_train = joblib.load("./data/model/x_train_data.pkl")
     df = df[X_train.columns]
+    print(df.T)
     prediction = model.predict(df)
     return {'status': 'success', 'price_by_meter': float(prediction[0]), 'total_price': int(round(prediction[0] * flat_area))}

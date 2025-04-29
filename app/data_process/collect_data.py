@@ -6,6 +6,9 @@ import time
 import pandas as pd
 import requests
 
+from ..settings import settings
+from ..util.get_city_data import get_poi_coordinates
+
 
 simple_fields = [
     "isApartments",
@@ -37,22 +40,22 @@ def get_clean_dataframe(dirty_data: list[dict]) -> pd.DataFrame:
         coords = geo_data.get("coordinates") or {}
         clean_row["latitude"] = coords.get("lat")
         clean_row["longitude"] = coords.get("lng")
-        addr_fields_mapping = {
-            "location": "city",
-            "raion": "district",
-        }
         clean_row['isPremium'] = row.get('isPremium') or False
-        for addr in geo_data.get("address") or []:
-            addr_type = addr["type"]
-            if addr_type in addr_fields_mapping and addr_fields_mapping[addr_type] not in clean_row:
-                clean_row[addr_fields_mapping[addr_type]] = addr.get("name")
+        clean_row['city'] = geo_data.get('address')[0].get('name')
+        districts = geo_data.get("districts") or []
+        if not districts:
+            continue
+        fd = districts[0]
+        if any(char.isdigit() for char in fd.get('name')):
+            if len(districts) > 1:
+                fd = districts[1]
+            else:
                 continue
-            if addr_type == "mikroraion":
-                clean_row["district"] = addr.get("name")
+        clean_row['district'] = fd.get('name')
         undergrounds = geo_data.get("undergrounds")
         closest_underground = undergrounds[0] if undergrounds is not None and len(undergrounds) > 0 else None
-        if closest_underground is not None:
-            clean_row["underground_name"] = closest_underground.get("name")
+        if closest_underground is not None and closest_underground.get('releaseYear', None) is None:
+            clean_row["underground_name"] = closest_underground.get("name").strip()
         else:
             clean_row["underground_name"] = None
         building_data = row.get("building") or {}
@@ -94,13 +97,13 @@ def get_cian_data_by_city_room(city: dict, room: int) -> pd.DataFrame:
     city_room_df = pd.DataFrame()
     i = 1
     while True:
-        time.sleep(random.randint(3, 12))
         page_result = get_cian_data_by_city_room_page(city['id'], room, i)
         if page_result is None or len(page_result["offersSerialized"]) == 0:
             city_room_df = city_room_df.drop_duplicates()
             return city_room_df
         city_room_df = pd.concat([city_room_df, get_clean_dataframe(page_result["offersSerialized"])])
         i += 1
+        time.sleep(random.randint(3, 12))
 
 
 def get_cian_data_by_city(city: dict) -> None:
@@ -114,16 +117,12 @@ def get_cian_data_by_city(city: dict) -> None:
     log(f"finished cian data collect process for city {city['name']}, got {result_df.shape[0]} rows")
 
 
-cities = [
-    {'name': 'spb', 'id': 2},
-    # {'name': 'moscow', 'id': 1},
-]
-
 def get_cian_data() -> None:
     log("started cian data collect process")
-    for city in cities:
+    for city in settings.CITIES:
         dirname = f'./data/{city["name"]}/cian'
         if not os.path.exists(dirname):
             os.makedirs(dirname)
+            get_poi_coordinates(city)
         get_cian_data_by_city(city)
     log("finished cian data collect process")

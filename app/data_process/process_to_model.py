@@ -9,12 +9,9 @@ from sklearn.model_selection import train_test_split
 from scipy.stats import median_abs_deviation
 
 
-with open('./data/spb/underground.json', 'r', encoding='utf-8') as f:
-    metro_data = json.load(f)
-    new_data = []
-    for metro in metro_data:
-        coords = metro_data[metro]
-        new_data.append({'name': metro, 'lat': coords[0], 'long': coords[1]})
+def get_metro_data_by_city(city: str) -> dict:
+    with open(f'./data/{city}/underground.json', 'r', encoding='utf-8') as f:
+        return json.load(f)
 
 
 def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -60,13 +57,14 @@ def calculate_groupwise_zscore(group):
     return group
 
 
-def get_train_test_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    df = pd.read_csv("./data/spb/cian/clean_dataset.csv")
+def process_data_by_city(city: dict) -> pd.DataFrame:
+    df = pd.read_csv(f"./data/{city['name']}/cian/clean_dataset.csv")
+    metro_data = get_metro_data_by_city(city['name'])
     df['underground_lat'] = df['underground_name'].map(lambda x: metro_data[x][0])
     df['underground_lon'] = df['underground_name'].map(lambda x: metro_data[x][1])
-    parks = pd.read_csv('./data/spb/spb_parks.csv')
-    schools = pd.read_csv('./data/spb/spb_schools.csv')
-    malls = pd.read_csv('./data/spb/spb_malls.csv')
+    parks = pd.read_csv(f'./data/{city["name"]}/parks.csv')
+    schools = pd.read_csv(f'./data/{city["name"]}/schools.csv')
+    malls = pd.read_csv(f'./data/{city["name"]}/malls.csv')
     df = add_poi_distances(df, parks, 'park')
     df = add_poi_distances(df, schools, 'school')
     df = add_poi_distances(df, malls, 'mall')
@@ -76,7 +74,7 @@ def get_train_test_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.
         df[col] = df[col].astype(int)
     df["price_by_meter"] = round(df["price"] / df["totalArea"], 2)
     df = df.drop(["price", 'parking', 'flatType'], axis=1)
-    center_lat, center_lon = 59.9390012, 30.3158184  # Координаты центра СПб
+    center_lat, center_lon = city['center']
     df["distance_to_center"] = df.apply(
         lambda row: haversine(row["latitude"], row["longitude"], center_lat, center_lon),
         axis=1,
@@ -92,22 +90,24 @@ def get_train_test_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.
     }
     df["building_material"] = df["building_material"].replace(material_mapping)
     df['balconiesCount'] = df['balconiesCount'] + df['loggiasCount']
-    counts = df.groupby('district')['district'].transform('size')
-    df = df[counts > 10]
     df = df.groupby(['city', 'district']).apply(calculate_groupwise_zscore)
-    df = df[(df['Modified_Z_Score'] < 3) & (df['Modified_Z_Score'] > -3)]
+    df = df[(df['Modified_Z_Score'] < 3.5) & (df['Modified_Z_Score'] > -3.5)]
     df = df.drop(['Modified_Z_Score', 'loggiasCount'], axis=1)
     df.reset_index(drop=True, inplace=True)
-    df.to_csv('./data/model/prepared_dataset.csv', index=False)
+    df['city_district'] = df.apply(lambda row: f"{row['city']}, {row['district']}", axis=1)
+    df = df.drop(['underground_name', 'has_underground_parking', 'isPremium', 'city', 'district'], axis=1)
+    df.to_csv(f'./data/{city["name"]}/cian/prepared_dataset.csv', index=False)
+    return df
+
+
+def get_train_test_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    df_msc = process_data_by_city({'name': 'moscow', 'id': 1, 'name_ru': 'Москва', 'center': (55.7540584, 37.62049)})
+    df_spb = process_data_by_city({'name': 'spb', 'id': 2, 'name_ru': 'Санкт-Петербург', 'center': (59.9390012, 30.3158184)})
+    df = pd.concat([df_spb, df_msc])
     X = df.drop("price_by_meter", axis=1)
     Y = df["price_by_meter"]
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.1, random_state=42)
-    encoders_map = {field_name: TargetEncoder() for field_name in [
-        "underground_name",
-        "city",
-        "district",
-        'building_material'
-    ]}
+    encoders_map = {field_name: TargetEncoder() for field_name in ['city_district', 'building_material']}
     for col in encoders_map:
         encoder = encoders_map[col]
         X_train[col + "_encoded"] = encoder.fit_transform(X_train[col], Y_train)
