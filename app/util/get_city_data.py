@@ -3,12 +3,9 @@ import requests
 from geopy.geocoders import Nominatim
 import time
 import json
-from datetime import date
 
 
-def get_metro_by_city(city: dict, date_: date) -> None:
-    df = pd.read_csv(f'./data/{city["name"]}/cian/{date_}.csv')
-    undergrounds = df.underground_name.unique()
+def get_metro_by_city(city: dict, undergrounds: list) -> None:
     coordinates = {}
     geolocator = Nominatim(user_agent="metro_spb_app")
     for station in undergrounds:

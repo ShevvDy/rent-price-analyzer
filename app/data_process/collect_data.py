@@ -41,7 +41,11 @@ def get_clean_dataframe(dirty_data: list[dict]) -> pd.DataFrame:
         clean_row["latitude"] = coords.get("lat")
         clean_row["longitude"] = coords.get("lng")
         clean_row['isPremium'] = row.get('isPremium') or False
-        clean_row['city'] = geo_data.get('address')[0].get('name')
+        address = geo_data.get('address')
+        city = address[0].get('name')
+        if city not in ['Москва', 'Санкт-Петербург', 'Севастополь']:
+            city = address[1].get('name')
+        clean_row['city'] = city
         districts = geo_data.get("districts") or []
         if not districts:
             continue
