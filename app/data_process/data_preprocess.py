@@ -3,17 +3,20 @@ import pandas as pd
 from geopy.distance import geodesic
 import json
 
-
-with open('./data/spb/underground.json', 'r', encoding='utf-8') as f:
-    metro_data = json.load(f)
-    new_data = []
-    for metro in metro_data:
-        coords = metro_data[metro]
-        new_data.append({'name': metro, 'lat': coords[0], 'long': coords[1]})
-metro_df = pd.DataFrame.from_records(new_data)
+from ..settings import settings
 
 
-def find_nearest_metro(row: pd.DataFrame) -> str | None:
+def get_metro_df_by_city(city: str) -> pd.DataFrame:
+    with open(f'./data/{city}/underground.json', 'r', encoding='utf-8') as f:
+        metro_data = json.load(f)
+        new_data = []
+        for metro in metro_data:
+            coords = metro_data[metro]
+            new_data.append({'name': metro, 'lat': coords[0], 'long': coords[1]})
+    return pd.DataFrame.from_records(new_data)
+
+
+def find_nearest_metro(row: pd.DataFrame, metro_df: pd.DataFrame) -> str | None:
     """Возвращает название ближайшей станции метро."""
     if pd.isna(row['underground_name']):
         try:
@@ -35,15 +38,16 @@ def find_nearest_metro(row: pd.DataFrame) -> str | None:
         return row['underground_name']
 
 def drop_useless(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.sort_values(by=["cianId", "addedTimestamp"], ascending=[True, False])
-    df = df.drop_duplicates(subset=["cianId"], keep="first")
+    df = df.sort_values(by=["cianId", "addedTimestamp"], ascending=[True, True])
+    df = df.drop_duplicates(subset=["cianId"], keep="last")
     df = df.drop(["cianId"], axis=1)
     df = df[(df.lap > 0.1) | (df.lap.isna())]
     df = df[~((df["kap"] >= 0.6) & (df["flatType"] == "studio") | (df["kap"] >= 0.75))]
     df = df.reset_index(drop=True)
     return df
 
-def fill_simple_fields(df: pd.DataFrame) -> pd.DataFrame:
+def fill_simple_fields(df: pd.DataFrame, city_name: str) -> pd.DataFrame:
+    metro_df = get_metro_df_by_city(city_name)
     df["isApartments"] = df["isApartments"].fillna(False).astype(np.bool_)
     df["balconiesCount"] = df["balconiesCount"].fillna(0).astype(np.int64)
     df["loggiasCount"] = df["loggiasCount"].fillna(0).astype(np.int64)
@@ -51,7 +55,7 @@ def fill_simple_fields(df: pd.DataFrame) -> pd.DataFrame:
     df["roomsCount"] = (
         df["roomsCount"].fillna(0).astype(np.int64)
     )  # because NaN is set when flayType == studio
-    df["underground_name"] = df.apply(lambda x: find_nearest_metro(x), axis=1)
+    df["underground_name"] = df.apply(lambda x: find_nearest_metro(x, metro_df), axis=1)
     df["building_material"] = df["building_material"].fillna("unknown")
     df["elevators"] = np.where(
         df["elevators"].isna(),
@@ -103,10 +107,11 @@ def fill_areas(df: pd.DataFrame) -> pd.DataFrame:
     return df_copy
 
 def preprocess_cian_data() -> None:
-    df = pd.read_csv("./data/spb/cian/dataset.csv")
-    df["lap"] = df["livingArea"] / df["totalArea"]
-    df["kap"] = df["kitchenArea"] / df["totalArea"]
-    df = drop_useless(df)
-    df = fill_simple_fields(df)
-    df = fill_areas(df)
-    df.to_csv("./data/spb/cian/clean_dataset.csv", index=False)
+    for city in settings.CITIES:
+        df = pd.read_csv(f"./data/{city['name']}/cian/dataset.csv")
+        df["lap"] = df["livingArea"] / df["totalArea"]
+        df["kap"] = df["kitchenArea"] / df["totalArea"]
+        df = drop_useless(df)
+        df = fill_simple_fields(df, city['name'])
+        df = fill_areas(df)
+        df.to_csv(f"./data/{city['name']}/cian/clean_dataset.csv", index=False)
