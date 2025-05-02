@@ -1,47 +1,11 @@
-import json
-from math import asin, cos, radians, sin, sqrt
-
 import joblib
-import numpy as np
 import pandas as pd
 from category_encoders import TargetEncoder
 from sklearn.model_selection import train_test_split
 from scipy.stats import median_abs_deviation
 
-
-def get_metro_data_by_city(city: str) -> dict:
-    with open(f'./data/{city}/underground.json', 'r', encoding='utf-8') as f:
-        return json.load(f)
-
-
-def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    # Конвертация в радианы
-    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
-    # Разницы координат
-    dlat = lat2 - lat1
-    dlon = lon2 - lon1
-    # Формула Хаверсина
-    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
-    c = 2 * asin(sqrt(a))
-    # Радиус Земли в километрах (6371 км)
-    return c * 6371
-
-
-def add_poi_distances(df: pd.DataFrame, poi_df: pd.DataFrame, prefix: str) -> pd.DataFrame:
-    """Добавляет расстояние до ближайшего объекта инфраструктуры"""
-    from sklearn.neighbors import BallTree
-
-    # Конвертация в радианы
-    poi_coords = np.deg2rad(poi_df[['lat', 'lon']].values)
-    flat_coords = np.deg2rad(df[['latitude', 'longitude']].values)
-
-    # Поиск ближайшего
-    tree = BallTree(poi_coords, metric='haversine')
-    distances, _ = tree.query(flat_coords, k=1)
-
-    # Конвертация в метры (6371000 - радиус Земли)
-    df[f'distance_to_{prefix}'] = distances * 6371000
-    return df
+from ..util.geo_objects import get_metro_data_by_city, haversine, add_distances_to_geo_objects
+from ..settings import settings
 
 
 def calculate_groupwise_zscore(group):
@@ -58,16 +22,16 @@ def calculate_groupwise_zscore(group):
 
 
 def process_data_by_city(city: dict) -> pd.DataFrame:
-    df = pd.read_csv(f"./data/{city['name']}/cian/clean_dataset.csv")
+    df = pd.read_csv(f"./data/{city['name']}/clean_dataset.csv")
     metro_data = get_metro_data_by_city(city['name'])
     df['underground_lat'] = df['underground_name'].map(lambda x: metro_data[x][0])
     df['underground_lon'] = df['underground_name'].map(lambda x: metro_data[x][1])
     parks = pd.read_csv(f'./data/{city["name"]}/parks.csv')
     schools = pd.read_csv(f'./data/{city["name"]}/schools.csv')
     malls = pd.read_csv(f'./data/{city["name"]}/malls.csv')
-    df = add_poi_distances(df, parks, 'park')
-    df = add_poi_distances(df, schools, 'school')
-    df = add_poi_distances(df, malls, 'mall')
+    df = add_distances_to_geo_objects(df, parks, 'park')
+    df = add_distances_to_geo_objects(df, schools, 'school')
+    df = add_distances_to_geo_objects(df, malls, 'mall')
     df['has_underground_parking'] = df['parking'].apply(lambda x: x == 'underground')
     binary_cols = ["isApartments", "hasFurniture", 'has_underground_parking', 'isPremium']
     for col in binary_cols:
@@ -96,14 +60,17 @@ def process_data_by_city(city: dict) -> pd.DataFrame:
     df.reset_index(drop=True, inplace=True)
     df['city_district'] = df.apply(lambda row: f"{row['city']}, {row['district']}", axis=1)
     df = df.drop(['underground_name', 'has_underground_parking', 'isPremium', 'city', 'district'], axis=1)
-    df.to_csv(f'./data/{city["name"]}/cian/prepared_dataset.csv', index=False)
+    df.to_csv(f'./data/{city["name"]}/prepared_dataset.csv', index=False)
     return df
 
 
-def get_train_test_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    df_msc = process_data_by_city({'name': 'moscow', 'id': 1, 'name_ru': 'Москва', 'center': (55.7540584, 37.62049)})
-    df_spb = process_data_by_city({'name': 'spb', 'id': 2, 'name_ru': 'Санкт-Петербург', 'center': (59.9390012, 30.3158184)})
-    df = pd.concat([df_spb, df_msc])
+def prepare_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    df = pd.DataFrame()
+    for city in settings.CITIES:
+        if city['name'] not in ['spb', 'moscow']:
+            continue
+        cur_df = process_data_by_city(city)
+        df = pd.concat([df, cur_df])
     X = df.drop("price_by_meter", axis=1)
     Y = df["price_by_meter"]
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.1, random_state=42)
@@ -115,5 +82,12 @@ def get_train_test_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.
         X_train = X_train.drop(col, axis=1)
         X_test = X_test.drop(col, axis=1)
         joblib.dump(encoder, f"./data/model/{col}_encoder.pkl")
-
+    data_name_map = {
+        "x_train": X_train,
+        "x_test": X_test,
+        "y_train": Y_train,
+        "y_test": Y_test,
+    }
+    for obj_name in data_name_map:
+        joblib.dump(data_name_map[obj_name], f"./data/model/{obj_name}_data.pkl")
     return X_train, X_test, Y_train, Y_test

@@ -7,7 +7,7 @@ import pandas as pd
 import requests
 
 from ..settings import settings
-from ..util.get_city_data import get_poi_coordinates
+from ..util.geo_objects import get_geo_objects_data
 
 
 simple_fields = [
@@ -25,10 +25,8 @@ simple_fields = [
     "livingArea",
 ]
 
-
 def log(text: str) -> None:
     print(f"{datetime.datetime.now()} - {text}")
-
 
 def get_clean_dataframe(dirty_data: list[dict]) -> pd.DataFrame:
     clean_data = []
@@ -71,7 +69,6 @@ def get_clean_dataframe(dirty_data: list[dict]) -> pd.DataFrame:
         clean_data.append(clean_row)
     return pd.DataFrame.from_records(clean_data)
 
-
 def get_cian_data_by_city_room_page(city_id: int, room_type: int, page: int) -> dict | None:
     url = "https://api.cian.ru/search-offers/v2/search-offers-desktop/"
     headers = {
@@ -96,7 +93,6 @@ def get_cian_data_by_city_room_page(city_id: int, room_type: int, page: int) -> 
         log(f"error during get data with room {room_type}, page {page}: {e}")
         return None
 
-
 def get_cian_data_by_city_room(city: dict, room: int) -> pd.DataFrame:
     city_room_df = pd.DataFrame()
     i = 1
@@ -109,24 +105,32 @@ def get_cian_data_by_city_room(city: dict, room: int) -> pd.DataFrame:
         i += 1
         time.sleep(random.randint(3, 12))
 
-
-def get_cian_data_by_city(city: dict) -> None:
+def get_cian_data_by_city(city: dict) -> pd.DataFrame:
     log(f"started cian data collect for city {city['name']}")
     result_df = pd.DataFrame()
     room_types = [1, 2, 3, 4, 5, 6, 9]
     for room in room_types:
         room_df = get_cian_data_by_city_room(city, room)
         result_df = pd.concat([result_df, room_df])
-    result_df.to_csv(f'./data/{city["name"]}/cian/{datetime.date.today()}.csv', index=False)
     log(f"finished cian data collect process for city {city['name']}, got {result_df.shape[0]} rows")
-
+    return result_df
 
 def get_cian_data() -> None:
     log("started cian data collect process")
     for city in settings.CITIES:
-        dirname = f'./data/{city["name"]}/cian'
+        dirname = f'./data/{city["name"]}'
         if not os.path.exists(dirname):
             os.makedirs(dirname)
-            get_poi_coordinates(city)
-        get_cian_data_by_city(city)
+            get_geo_objects_data(city)
+        city_df = get_cian_data_by_city(city)
+        result_df_path = f"{dirname}/dataset.csv"
+        if not os.path.exists(result_df_path):
+            city_df.to_csv(result_df_path, index=False)
+            return
+        result_df = pd.read_csv(result_df_path)
+        result_df = pd.concat([result_df, city_df])
+        result_df = result_df.drop_duplicates()
+        result_df = result_df.sort_values(by=["cianId", "addedTimestamp"], ascending=[True, True])
+        result_df = result_df.drop_duplicates(subset=["cianId"], keep="last")
+        result_df.to_csv(result_df_path, index=False)
     log("finished cian data collect process")

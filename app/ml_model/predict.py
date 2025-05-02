@@ -1,22 +1,21 @@
-import json
 from datetime import datetime
 
 import joblib
 import pandas as pd
 import numpy as np
 
-from ..data_process import add_poi_distances, find_nearest_metro, get_metro_df_by_city, haversine
+from ..models import City
+from ..util.geo_objects import haversine, add_distances_to_geo_objects, find_nearest_metro, get_metro_df_by_city, get_metro_data_by_city
 from ..util.address import get_address_info
-
-
-with open('./data/spb/underground.json', 'r', encoding='utf-8') as f:
-    metro_data = json.load(f)
 
 
 def get_rental_price(data: dict) -> dict:
     addr_data = get_address_info(data['address'])
     if addr_data is None:
         raise Exception(f'Address {data["address"]} not found')
+    city = City.get_by_name_ru(addr_data[0])
+    if not city or not city.is_in_model:
+        raise Exception(f'City {addr_data[0]} is not currently supported')
     data['city_district'] = f"{addr_data[0]}, {addr_data[1]}"
     data['latitude'] = addr_data[2]
     data['longitude'] = addr_data[3]
@@ -28,18 +27,19 @@ def get_rental_price(data: dict) -> dict:
     for col in binary_cols:
         df[col] = df[col].astype(int)
 
+    metro_data = get_metro_data_by_city(city.short_name)
     df['underground_name'] = np.nan
-    metro_df = get_metro_df_by_city('spb')
+    metro_df = get_metro_df_by_city(city.short_name)
     df["underground_name"] = df.apply(lambda x: find_nearest_metro(x, metro_df), axis=1)
     df['underground_lat'] = df['underground_name'].map(lambda x: metro_data[x][0])
     df['underground_lon'] = df['underground_name'].map(lambda x: metro_data[x][1])
-    parks = pd.read_csv('./data/spb/parks.csv')
-    schools = pd.read_csv('./data/spb/schools.csv')
-    malls = pd.read_csv('./data/spb/malls.csv')
-    df = add_poi_distances(df, parks, 'park')
-    df = add_poi_distances(df, schools, 'school')
-    df = add_poi_distances(df, malls, 'mall')
-    center_lat, center_lon = 59.9390012, 30.3158184  # Координаты центра СПб
+    parks = pd.read_csv(f'./data/{city.short_name}/parks.csv')
+    schools = pd.read_csv(f'./data/{city.short_name}/schools.csv')
+    malls = pd.read_csv(f'./data/{city.short_name}/malls.csv')
+    df = add_distances_to_geo_objects(df, parks, 'park')
+    df = add_distances_to_geo_objects(df, schools, 'school')
+    df = add_distances_to_geo_objects(df, malls, 'mall')
+    center_lat, center_lon = city.center_lat, city.center_lon  # Координаты центра
     df["distance_to_center"] = df.apply(
         lambda row: haversine(row["latitude"], row["longitude"], center_lat, center_lon),
         axis=1,
@@ -62,9 +62,8 @@ def get_rental_price(data: dict) -> dict:
         df = df.drop(col, axis=1)
         df[col + "_encoded"] = df[col + "_encoded"].fillna(0.0)
 
-    model = joblib.load("./data/model/rf_model.pkl")
+    model = joblib.load("./data/model/best_model.pkl")
     X_train = joblib.load("./data/model/x_train_data.pkl")
     df = df[X_train.columns]
-    print(df.T)
     prediction = model.predict(df)
     return {'status': 'success', 'price_by_meter': float(prediction[0]), 'total_price': int(round(prediction[0] * flat_area))}

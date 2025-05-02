@@ -16,7 +16,8 @@ def get_address_info(address: str) -> tuple[str, str, float, float] | None:
         nominatim_addr = geolocator.geocode(address_nominatim, addressdetails=True)
         raw_addr = nominatim_addr.raw['address']
         district = raw_addr['city_district'].replace('округ', '').strip() if 'city_district' in raw_addr else None
-    return addr_info['region'], district or addr_info['city_district'], float(addr_info['geo_lat']), float(addr_info['geo_lon'])
+    city = addr_info.get('city') or addr_info.get('region')
+    return city, district or addr_info['city_district'], float(addr_info['geo_lat']), float(addr_info['geo_lon'])
 
 
 def get_address_suggestions(query: str) -> list[str]:
