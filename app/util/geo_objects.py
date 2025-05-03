@@ -78,9 +78,12 @@ def get_geo_objects_data(city: dict) -> None:
         pd.DataFrame(poi_data).to_csv(f'./data/{city["name"]}/{poi_type}s.csv', index=False)
 
 
-def get_metro_data_by_city(city: str) -> dict:
-    with open(f'./data/{city}/underground.json', 'r', encoding='utf-8') as f:
-        return json.load(f)
+def get_metro_data_by_city(city: str) -> dict | None:
+    try:
+        with open(f'./data/{city}/underground.json', 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return None
 
 
 def get_metro_df_by_city(city: str) -> pd.DataFrame | None:

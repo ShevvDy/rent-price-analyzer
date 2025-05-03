@@ -9,8 +9,8 @@ def build_models() -> None:
     ]
 
     rf = RandomForestRegressor(
-        n_estimators=700,
-        max_depth=25,
+        n_estimators=500,
+        max_depth=22,
         max_features=8,
         n_jobs=-1,
         random_state=42,
@@ -21,7 +21,7 @@ def build_models() -> None:
     xgb = XGBRegressor(
         max_depth=12,
         learning_rate=0.08,
-        n_estimators=1000,
+        n_estimators=700,
         reg_alpha=15,
         colsample_bylevel=0.4,
         random_state=42,

@@ -23,9 +23,6 @@ def calculate_groupwise_zscore(group):
 
 def process_data_by_city(city: dict) -> pd.DataFrame:
     df = pd.read_csv(f"./data/{city['name']}/clean_dataset.csv")
-    metro_data = get_metro_data_by_city(city['name'])
-    df['underground_lat'] = df['underground_name'].map(lambda x: metro_data[x][0])
-    df['underground_lon'] = df['underground_name'].map(lambda x: metro_data[x][1])
     parks = pd.read_csv(f'./data/{city["name"]}/parks.csv')
     schools = pd.read_csv(f'./data/{city["name"]}/schools.csv')
     malls = pd.read_csv(f'./data/{city["name"]}/malls.csv')
@@ -43,10 +40,17 @@ def process_data_by_city(city: dict) -> pd.DataFrame:
         lambda row: haversine(row["latitude"], row["longitude"], center_lat, center_lon),
         axis=1,
     )
-    df['metro_distance'] = df.apply(
-        lambda row: haversine(row["latitude"], row["longitude"], row['underground_lat'], row['underground_lon']),
-        axis=1)
-    df = df.drop(["latitude", "longitude", 'underground_lat', 'underground_lon'], axis=1)
+    metro_data = get_metro_data_by_city(city['name'])
+    if metro_data:
+        df['underground_lat'] = df['underground_name'].map(lambda x: metro_data[x][0])
+        df['underground_lon'] = df['underground_name'].map(lambda x: metro_data[x][1])
+        df['metro_distance'] = df.apply(
+            lambda row: haversine(row["latitude"], row["longitude"], row['underground_lat'], row['underground_lon']),
+            axis=1)
+        df = df.drop(['underground_lat', 'underground_lon'], axis=1)
+    else:
+        df['metro_distance'] = 100.0
+    df = df.drop(["latitude", "longitude"], axis=1)
     material_mapping = {
         'stalin': 'old',
         'aerocreteBlock': 'block',
