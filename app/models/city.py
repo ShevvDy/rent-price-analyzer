@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 class City(Base):
     __tablename__ = 'city'
 
-    id_ = Column('id', Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)
     short_name = Column(String, unique=True, nullable=False)
     name_ru = Column(String, unique=True, nullable=False)
     cian_id = Column(Integer, unique=True, nullable=False)

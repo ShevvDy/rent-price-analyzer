@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 class MetroStation(Base):
     __tablename__ = 'metro_station'
 
-    id_ = Column('id', Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)
     city_id = Column(ForeignKey('city.id'), nullable=False)
     name = Column(String, nullable=False)
     lat = Column(Float, nullable=False)

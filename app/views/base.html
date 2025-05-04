@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}{% endblock %}</title>
+</head>
+<body>
+    <nav>
+        {% if current_user.is_authenticated %}
+            <a href="{{ url_for('logout') }}">Выход</a>
+        {% else %}
+            <a href="{{ url_for('login_view') }}">Войти</a>
+            <a href="{{ url_for('register_view') }}">Регистрация</a>
+        {% endif %}
+    </nav>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <ul>
+                {% for message in messages %}
+                    <li>{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+</body>
+</html>

@@ -87,14 +87,13 @@ def get_metro_data_by_city(city: str) -> dict | None:
 
 
 def get_metro_df_by_city(city: str) -> pd.DataFrame | None:
-    try:
-        metro_data = get_metro_data_by_city(city)
-        df_data = []
-        for metro in metro_data:
-            coords = metro_data[metro]
-            df_data.append({'name': metro, 'lat': coords[0], 'lon': coords[1]})
-    except FileNotFoundError:
+    metro_data = get_metro_data_by_city(city)
+    df_data = []
+    if not metro_data:
         return None
+    for metro in metro_data:
+        coords = metro_data[metro]
+        df_data.append({'name': metro, 'lat': coords[0], 'lon': coords[1]})
     return pd.DataFrame.from_records(df_data)
 
 
