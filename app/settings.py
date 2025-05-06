@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     DADATA_TOKEN: str
     DADATA_SECRET: str
     SQLALCHEMY_DATABASE_URI: str
+    SECRET_KEY: str
 
     CITIES: list[dict] = [
         {'name': 'spb', 'id': 2, 'name_ru': 'Санкт-Петербург', 'center': (59.9390012, 30.3158184), 'has_metro': True},

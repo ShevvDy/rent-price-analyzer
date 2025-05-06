@@ -18,8 +18,8 @@ class Base(db.Model):
 
     @classmethod
     def get_all(cls) -> list['Base']:
-        return cls.query.order_by(cls.id_).all()
+        return cls.query.order_by(cls.id).all()
 
     @classmethod
     def get_item_by_id(cls, item_id: int) -> Optional['Base']:
-        return cls.query.filter(cls.id_ == item_id).first()
+        return cls.query.filter(cls.id == item_id).first()
