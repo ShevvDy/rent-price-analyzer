@@ -1,48 +1,16 @@
 import numpy as np
 import pandas as pd
-from geopy.distance import geodesic
-import json
 
 from ..settings import settings
+from ..util.geo_objects import get_metro_df_by_city, find_nearest_metro
 
-
-def get_metro_df_by_city(city: str) -> pd.DataFrame:
-    with open(f'./data/{city}/underground.json', 'r', encoding='utf-8') as f:
-        metro_data = json.load(f)
-        new_data = []
-        for metro in metro_data:
-            coords = metro_data[metro]
-            new_data.append({'name': metro, 'lat': coords[0], 'long': coords[1]})
-    return pd.DataFrame.from_records(new_data)
-
-
-def find_nearest_metro(row: pd.DataFrame, metro_df: pd.DataFrame) -> str | None:
-    """Возвращает название ближайшей станции метро."""
-    if pd.isna(row['underground_name']):
-        try:
-            # Получаем координаты квартиры
-            flat_point = (row['latitude'], row['longitude'])
-
-            # Рассчитываем расстояния до всех станций
-            distances = metro_df.apply(
-                lambda x: geodesic(flat_point, (x['lat'], x['long'])).meters,
-                axis=1
-            )
-
-            # Находим ближайшую
-            nearest_idx = distances.idxmin()
-            return metro_df.iloc[nearest_idx]['name']
-        except:
-            return None
-    else:
-        return row['underground_name']
 
 def drop_useless(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.sort_values(by=["cianId", "addedTimestamp"], ascending=[True, True])
-    df = df.drop_duplicates(subset=["cianId"], keep="last")
     df = df.drop(["cianId"], axis=1)
+    df["lap"] = df["livingArea"] / df["totalArea"]
+    df["kap"] = df["kitchenArea"] / df["totalArea"]
     df = df[(df.lap > 0.1) | (df.lap.isna())]
-    df = df[~((df["kap"] >= 0.6) & (df["flatType"] == "studio") | (df["kap"] >= 0.75))]
+    df = df[~((df["kap"] >= 0.6) & (df.roomsCount.isna()) | (df["kap"] >= 0.75))]
     df = df.reset_index(drop=True)
     return df
 
@@ -71,7 +39,6 @@ def fill_simple_fields(df: pd.DataFrame, city_name: str) -> pd.DataFrame:
     return df
 
 def fill_areas(df: pd.DataFrame) -> pd.DataFrame:
-    from sklearn.experimental import enable_iterative_imputer
     from sklearn.impute import IterativeImputer
     from sklearn.ensemble import RandomForestRegressor
     from sklearn.preprocessing import OneHotEncoder
@@ -106,12 +73,10 @@ def fill_areas(df: pd.DataFrame) -> pd.DataFrame:
 
     return df_copy
 
-def preprocess_cian_data() -> None:
+def clean_data() -> None:
     for city in settings.CITIES:
-        df = pd.read_csv(f"./data/{city['name']}/cian/dataset.csv")
-        df["lap"] = df["livingArea"] / df["totalArea"]
-        df["kap"] = df["kitchenArea"] / df["totalArea"]
+        df = pd.read_csv(f"./data/{city['name']}/dataset.csv")
         df = drop_useless(df)
         df = fill_simple_fields(df, city['name'])
         df = fill_areas(df)
-        df.to_csv(f"./data/{city['name']}/cian/clean_dataset.csv", index=False)
+        df.to_csv(f"./data/{city['name']}/clean_dataset.csv", index=False)

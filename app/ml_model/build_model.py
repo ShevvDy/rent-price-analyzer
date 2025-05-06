@@ -2,19 +2,11 @@ import joblib
 from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 
-from ..data_process import get_train_test_data
-
 
 def build_models() -> None:
-    X_train, X_test, Y_train, Y_test = get_train_test_data()
-    data_name_map = {
-        "x_train": X_train,
-        "x_test": X_test,
-        "y_train": Y_train,
-        "y_test": Y_test,
-    }
-    for obj_name in data_name_map:
-        joblib.dump(data_name_map[obj_name], f"./data/model/{obj_name}_data.pkl")
+    X_train, X_test, Y_train, Y_test = [
+        joblib.load(f"./data/model/{obj_name}_data.pkl") for obj_name in ["x_train", "x_test", "y_train", "y_test"]
+    ]
 
     rf = RandomForestRegressor(
         n_estimators=700,

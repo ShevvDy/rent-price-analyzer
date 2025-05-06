@@ -25,16 +25,13 @@ def get_price_api() -> tuple[Response, int]:
         }), 500
     return jsonify(response), 200
 
-
 def get_address_suggestions_api() -> tuple[Response, int]:
     query = request.args.get('query', '')
     suggestions = get_address_suggestions(query)
     return jsonify(suggestions), 200
 
-
 def index_view() -> str:
     return render_template("index.html")
-
 
 def init_controllers(app: Flask) -> None:
     app.add_url_rule('/', view_func=index_view, methods=['GET'])

@@ -1,0 +1,16 @@
+version: '0.1'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: rentan
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: rentan
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
