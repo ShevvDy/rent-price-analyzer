@@ -1,3 +1,4 @@
+from typing import TYPE_CHECKING
 from math import radians, sin, cos, asin, sqrt
 
 import numpy as np
@@ -7,6 +8,10 @@ from geopy.distance import geodesic
 from geopy.geocoders import Nominatim
 import time
 import json
+
+
+if TYPE_CHECKING:
+    from ..models import City
 
 
 def get_metro_by_city(city: dict, undergrounds: list) -> None:
@@ -21,7 +26,7 @@ def get_metro_by_city(city: dict, undergrounds: list) -> None:
         json.dump(coordinates, f, indent=4)
 
 
-def get_geo_objects_data(city: dict) -> None:
+def get_geo_objects_data(city: 'City') -> None:
     """Возвращает DataFrame с координатами объектов инфраструктуры"""
     overpass_url = "https://overpass-api.de/api/interpreter"
 
@@ -29,7 +34,7 @@ def get_geo_objects_data(city: dict) -> None:
     queries = {
         'park': f"""
             [out:json];
-            area["name"="{city['name_ru']}"]->.searchArea;
+            area["name"="{city.name_ru}"]->.searchArea;
             (
                 node["leisure"="park"](area.searchArea);
                 way["leisure"="park"](area.searchArea);
@@ -38,7 +43,7 @@ def get_geo_objects_data(city: dict) -> None:
         """,
         'school': f"""
             [out:json];
-            area["name"="{city['name_ru']}"]->.searchArea;
+            area["name"="{city.name_ru}"]->.searchArea;
             (
                 node["amenity"="school"](area.searchArea);
                 way["amenity"="school"](area.searchArea);
@@ -47,7 +52,7 @@ def get_geo_objects_data(city: dict) -> None:
         """,
         'mall': f"""
             [out:json];
-            area["name"="{city['name_ru']}"]->.searchArea;
+            area["name"="{city.name_ru}"]->.searchArea;
             (
                 node["shop"="mall"](area.searchArea);
                 way["shop"="mall"](area.searchArea);
@@ -75,26 +80,23 @@ def get_geo_objects_data(city: dict) -> None:
                         'lat': element['center']['lat'],
                         'lon': element['center']['lon']
                     })
-        pd.DataFrame(poi_data).to_csv(f'./data/{city["name"]}/{poi_type}s.csv', index=False)
+        pd.DataFrame(poi_data).to_csv(f'./data/{city.short_name}/{poi_type}s.csv', index=False)
 
 
-def get_metro_data_by_city(city: str) -> dict | None:
-    try:
-        with open(f'./data/{city}/underground.json', 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
+def get_metro_data_by_city(city: 'City') -> dict | None:
+    if not city.metro_stations:
         return None
+    result = {}
+    for station in city.metro_stations:
+        result[station.name] = [station.lat, station.lon]
+    return result
 
 
-def get_metro_df_by_city(city: str) -> pd.DataFrame | None:
-    metro_data = get_metro_data_by_city(city)
-    df_data = []
+def get_metro_df_by_city(city: 'City') -> pd.DataFrame | None:
+    metro_data = city.metro_stations
     if not metro_data:
         return None
-    for metro in metro_data:
-        coords = metro_data[metro]
-        df_data.append({'name': metro, 'lat': coords[0], 'lon': coords[1]})
-    return pd.DataFrame.from_records(df_data)
+    return pd.DataFrame([{'name': metro.name, 'lat': metro.lat, 'lon': metro.lon} for metro in metro_data])
 
 
 def find_nearest_metro(row: pd.DataFrame, metro_df: pd.DataFrame | None) -> str | None:

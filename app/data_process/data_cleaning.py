@@ -1,9 +1,11 @@
 import numpy as np
 import pandas as pd
 
-from ..settings import settings
+from ..models import City
 from ..util.geo_objects import get_metro_df_by_city, find_nearest_metro
 
+
+pd.set_option('future.no_silent_downcasting', True)
 
 def drop_useless(df: pd.DataFrame) -> pd.DataFrame:
     df = df.drop(["cianId"], axis=1)
@@ -14,8 +16,8 @@ def drop_useless(df: pd.DataFrame) -> pd.DataFrame:
     df = df.reset_index(drop=True)
     return df
 
-def fill_simple_fields(df: pd.DataFrame, city_name: str) -> pd.DataFrame:
-    metro_df = get_metro_df_by_city(city_name)
+def fill_simple_fields(df: pd.DataFrame, city: 'City') -> pd.DataFrame:
+    metro_df = get_metro_df_by_city(city)
     df["isApartments"] = df["isApartments"].fillna(False).astype(np.bool_)
     df["balconiesCount"] = df["balconiesCount"].fillna(0).astype(np.int64)
     df["loggiasCount"] = df["loggiasCount"].fillna(0).astype(np.int64)
@@ -75,9 +77,9 @@ def fill_areas(df: pd.DataFrame) -> pd.DataFrame:
     return df_copy
 
 def clean_data() -> None:
-    for city in settings.CITIES:
-        df = pd.read_csv(f"./data/{city['name']}/dataset.csv")
+    for city in City.get_all():
+        df = pd.read_csv(f"./data/{city.short_name}/dataset.csv")
         df = drop_useless(df)
-        df = fill_simple_fields(df, city['name'])
+        df = fill_simple_fields(df, city)
         df = fill_areas(df)
-        df.to_csv(f"./data/{city['name']}/clean_dataset.csv", index=False)
+        df.to_csv(f"./data/{city.short_name}/clean_dataset.csv", index=False)
