@@ -39,6 +39,7 @@ def fill_simple_fields(df: pd.DataFrame, city_name: str) -> pd.DataFrame:
     return df
 
 def fill_areas(df: pd.DataFrame) -> pd.DataFrame:
+    from sklearn.experimental import enable_iterative_imputer
     from sklearn.impute import IterativeImputer
     from sklearn.ensemble import RandomForestRegressor
     from sklearn.preprocessing import OneHotEncoder
