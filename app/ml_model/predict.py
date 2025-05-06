@@ -6,11 +6,72 @@ import numpy as np
 
 from ..models import City
 from ..util.geo_objects import haversine, add_distances_to_geo_objects, find_nearest_metro, get_metro_df_by_city, get_metro_data_by_city
-from ..util.address import get_address_info
+from ..util.address import get_address_short_info, dadata_, geolocator
 
+
+def get_nearest_neighbours(city: str, addr_lat: float, addr_lon: float) -> list[dict]:
+    nearest = []
+
+    df = pd.read_csv(f'./data/{city}/analogues_dataset.csv')
+    df['distances'] = np.sqrt((addr_lat - df['latitude']) ** 2 + (addr_lon - df['longitude']) ** 2)
+    df = df.sort_values('distances', ascending=True)
+
+    for idx, row in df.iterrows():
+        if len(nearest) == 3 or row['distances'] > 0.005:
+            break
+        try:
+            addr = dadata_.geolocate('address', lat=row['latitude'], lon=row['longitude'])
+            suggestion = addr['suggestions']['data']
+            if not suggestion['street'] or not suggestion['house']:
+                raise Exception
+            district = addr['settlement']
+            if district is None:
+                nominatim_addr = geolocator.geocode(f"{row['latitude']}, {row['longitude']}", addressdetails=True)
+                raw_addr = nominatim_addr.raw['address']
+                district = (
+                    raw_addr['city_district'].replace('округ', '').strip() if 'city_district' in raw_addr else None
+                )
+                district = district or addr.get('city_district')
+            address_formers = [addr.get('city') or addr.get('region'), district, addr.get('street'), addr.get('house')]
+        except:
+            addr = geolocator.geocode(f"{row['latitude']}, {row['longitude']}", addressdetails=True)
+            if not addr or not addr.raw:
+                continue
+            raw_addr = addr.raw['address']
+            try:
+                settlement = raw_addr.get('town')
+                if not settlement:
+                    city_district = (
+                        raw_addr['city_district'].replace('округ', '').strip() if 'city_district' in raw_addr else None
+                    )
+                    if not city_district:
+                        raise Exception
+                    settlement = city_district
+                address_formers = [raw_addr['state'], settlement, raw_addr['road'], raw_addr['house_number']]
+            except:
+                continue
+        cur_dict = {
+            field: row[field] for field in [
+                'kitchenArea',
+                'totalArea',
+                'livingArea',
+                'hasFurniture',
+                'addedTimestamp',
+                'roomsCount',
+                'elevators',
+                'floorNumber',
+                'floors_count',
+                'price',
+                'balconiesCount',
+                'isApartments',
+            ]
+        }
+        cur_dict['address'] = ', '.join(address_formers)
+        nearest.append(cur_dict)
+    return nearest
 
 def get_rental_price(data: dict) -> dict:
-    addr_data = get_address_info(data['address'])
+    addr_data = get_address_short_info(data['address'])
     if addr_data is None:
         raise Exception(f'Address {data["address"]} not found')
     city = City.get_by_name_ru(addr_data[0])
@@ -27,9 +88,9 @@ def get_rental_price(data: dict) -> dict:
     for col in binary_cols:
         df[col] = df[col].astype(int)
 
-    metro_data = get_metro_data_by_city(city.short_name)
+    metro_data = get_metro_data_by_city(city)
     df['underground_name'] = np.nan
-    metro_df = get_metro_df_by_city(city.short_name)
+    metro_df = get_metro_df_by_city(city)
     df["underground_name"] = df.apply(lambda x: find_nearest_metro(x, metro_df), axis=1)
     df['underground_lat'] = df['underground_name'].map(lambda x: metro_data[x][0])
     df['underground_lon'] = df['underground_name'].map(lambda x: metro_data[x][1])
@@ -66,4 +127,9 @@ def get_rental_price(data: dict) -> dict:
     X_train = joblib.load("./data/model/x_train_data.pkl")
     df = df[X_train.columns]
     prediction = model.predict(df)
-    return {'status': 'success', 'price_by_meter': float(prediction[0]), 'total_price': int(round(prediction[0] * flat_area))}
+    return {
+        'status': 'success',
+        'price_by_meter': float(prediction[0]),
+        'total_price': round(prediction[0] * flat_area / 500) * 500,
+        'nearest_neighbours': get_nearest_neighbours(city.short_name, addr_data[2], addr_data[3]),
+    }

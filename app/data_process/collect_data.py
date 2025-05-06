@@ -6,7 +6,7 @@ import time
 import pandas as pd
 import requests
 
-from ..settings import settings
+from ..models import City
 from ..util.geo_objects import get_geo_objects_data
 
 
@@ -93,11 +93,11 @@ def get_cian_data_by_city_room_page(city_id: int, room_type: int, page: int) -> 
         log(f"error during get data with room {room_type}, page {page}: {e}")
         return None
 
-def get_cian_data_by_city_room(city: dict, room: int) -> pd.DataFrame:
+def get_cian_data_by_city_room(city: 'City', room: int) -> pd.DataFrame:
     city_room_df = pd.DataFrame()
     i = 1
     while True:
-        page_result = get_cian_data_by_city_room_page(city['id'], room, i)
+        page_result = get_cian_data_by_city_room_page(city.cian_id, room, i)
         if page_result is None or len(page_result["offersSerialized"]) == 0:
             city_room_df = city_room_df.drop_duplicates()
             return city_room_df
@@ -105,20 +105,20 @@ def get_cian_data_by_city_room(city: dict, room: int) -> pd.DataFrame:
         i += 1
         time.sleep(random.randint(3, 12))
 
-def get_cian_data_by_city(city: dict) -> pd.DataFrame:
-    log(f"started cian data collect for city {city['name']}")
+def get_cian_data_by_city(city: 'City') -> pd.DataFrame:
+    log(f"started cian data collect for city {city.short_name}")
     result_df = pd.DataFrame()
     room_types = [1, 2, 3, 4, 5, 6, 9]
     for room in room_types:
         room_df = get_cian_data_by_city_room(city, room)
         result_df = pd.concat([result_df, room_df])
-    log(f"finished cian data collect process for city {city['name']}, got {result_df.shape[0]} rows")
+    log(f"finished cian data collect process for city {city.short_name}, got {result_df.shape[0]} rows")
     return result_df
 
 def get_cian_data() -> None:
     log("started cian data collect process")
-    for city in settings.CITIES:
-        dirname = f'./data/{city["name"]}'
+    for city in City.get_all():
+        dirname = f'./data/{city.short_name}'
         if not os.path.exists(dirname):
             os.makedirs(dirname)
             get_geo_objects_data(city)
