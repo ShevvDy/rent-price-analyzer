@@ -33,6 +33,7 @@ def get_address_suggestions_api() -> tuple[Response, int]:
     suggestions = get_address_suggestions(query)
     return jsonify(suggestions), 200
 
+@login_required
 def index_view() -> str:
     return render_template("index.html")
 

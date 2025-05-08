@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <title>Расчет стоимости аренды</title>
 </head>
 <body>
@@ -110,6 +111,71 @@
 
     <div id="errors"></div>
     <div id="result"></div>
+    <div id="plot"></div>
+    <script>
+        const graphJson = {
+  "data": [
+    {
+      "hovertemplate": "x=%{x}<br>y=%{y}<extra></extra>",
+      "legendgroup": "",
+      "line": {
+        "color": "#636efa",
+        "dash": "solid"
+      },
+      "marker": {
+        "symbol": "circle"
+      },
+      "mode": "lines",
+      "name": "",
+      "orientation": "v",
+      "showlegend": false,
+      "type": "scatter",
+      "x": [
+        "2025-03-01",
+        "2025-04-01",
+        "2025-05-01"
+      ],
+      "xaxis": "x",
+      "y": [
+        40000,
+        40500,
+        41000
+      ],
+      "yaxis": "y"
+    }
+  ],
+  "layout": {
+    "legend": {
+      "tracegroupgap": 0
+    },
+    "template": {},
+    "title": {
+      "text": "График изменения стоимости жилья во времени"
+    },
+    "xaxis": {
+      "anchor": "y",
+      "domain": [
+        0,
+        1
+      ],
+      "title": {
+        "text": "Дата"
+      }
+    },
+    "yaxis": {
+      "anchor": "x",
+      "domain": [
+        0,
+        1
+      ],
+      "title": {
+        "text": "Стоимость"
+      }
+    }
+  }
+};
+        Plotly.newPlot('plot', graphJson.data, graphJson.layout);
+    </script>
     <script>
         async function calculateRentalPrice(event) {
             event.preventDefault();

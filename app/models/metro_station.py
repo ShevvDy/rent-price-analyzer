@@ -17,4 +17,4 @@ class MetroStation(Base):
     lat = Column(Float, nullable=False)
     lon = Column(Float, nullable=False)
 
-    city: Mapped['City'] = relationship(uselist=False, back_populates='metro_stations')
+    city: Mapped['City'] = relationship(back_populates='metro_stations')
