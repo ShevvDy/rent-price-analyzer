@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block custom_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/estimated.css') }}">
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+{% endblock %}
+
+{% block title %}Подробный анализ стоимости жилья{% endblock %}
+
+{% block content %}
+<div class="outer-div">
+    <div class="info-div">
+        <div class="info-div-row">
+            <div class="info-div-row__item info-div-address">
+                <h3>Адрес</h3>
+                <div class="info-div__item">
+                    <span class="info-div__item_value" id="info-div-address">{{ home.address }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="info-div-row">
+            <div class="info-div-row__item">
+                <h3>Основные параметры</h3>
+                <div class="info-div__item">
+                    <span class="info-div__item_placeholder">Общая площадь (м<sup>2</sup>)</span>
+                    <span class="info-div__item_value" id="info-div-total-area">{{ home.total_area }}</span>
+                </div>
+                <div class="info-div__item">
+                    <span class="info-div__item_placeholder">Тип жилья</span>
+                    <span class="info-div__item_value" id="info-div-type">{{ "Апартаменты" if home.is_apartments else ("Студия" if home.rooms_count == 0 else "Квартира") }}</span>
+                </div>
+                <div class="info-div__item">
+                    <span class="info-div__item_placeholder">Количество комнат</span>
+                    <span class="info-div__item_value" id="info-div-rooms">{{ home.rooms_count }}</span>
+                </div>
+            </div>
+            <div class="info-div-row__item">
+                <h3>Характеристики здания</h3>
+                <div class="info-div__item">
+                    <span class="info-div__item_placeholder">Этажей в доме</span>
+                    <span class="info-div__item_value" id="info-div-floors-count">{{ home.floors_count }}</span>
+                </div>
+                <div class="info-div__item">
+                    <span class="info-div__item_placeholder">Этаж квартиры</span>
+                    <span class="info-div__item_value" id="info-div-floor-number">{{ home.floor_number }}</span>
+                </div>
+                <div class="info-div__item">
+                    <span class="info-div__item_placeholder">Материал стен</span>
+                    <span class="info-div__item_value" id="info-div-building-material">{{ home.building_material }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="info-div-row">
+            <div class="info-div-row__item">
+                <h3>Дополнительно</h3>
+                <div class="info-div__item">
+                    <span class="info-div__item_placeholder">Количество лифтов</span>
+                    <span class="info-div__item_value" id="info-div-elevators">{{ home.elevators }}</span>
+                </div>
+                <div class="info-div__item">
+                    <span class="info-div__item_placeholder">Балконы</span>
+                    <span class="info-div__item_value" id="info-div-balconies">{{ home.balconies_count }}</span>
+                </div>
+                <div class="info-div__item">
+                    <span class="info-div__item_placeholder">Мебель</span>
+                    <span class="info-div__item_value" id="info-div-furniture">{{ "Есть" if home.has_furniture else "Нет" }}</span>
+                </div>
+            </div>
+            <div class="info-div-row__item info-div__another_item">
+                <div class="predicted-price" id="info-div-price">{{ home.computed_price }} ₽</div>
+                <div class="compute-date" id="info-div-date">Дата расчета: {{ compute_date }}</div>
+                <div class="info-div__buttons">
+                    <button id="info-div__button_recount" onclick="recountHome()">Рассчитать повторно</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="additional-info">
+        <div class="analogues-list">
+            <h3>Другие варианты жилья в этом районе</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <td>Общая площадь (м<sup>2</sup>)</td>
+                        <td>Тип жилья</td>
+                        <td>Количество комнат</td>
+                        <td>Стоимость</td>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    {% for similar_home in home.similar_objects %}
+                        <tr onclick="openModal({{ loop.index0 }})">
+                            <td>{{ similar_home.totalArea }}</td>
+                            <td>{{ "Апартаменты" if similar_home.isApartments else ("Студия" if similar_home.rooms_count == 0 else "Квартира") }}</td>
+                            <td>{{ similar_home.roomsCount | int }}</td>
+                            <td>{{ similar_home.price | int }} ₽</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="graphic" id="plot"></div>
+    </div>
+</div>
+<div class="modal-window" id="modal-window" onclick="closeModal()">
+    <div class="info-div modal-content" id="modal-content"></div>
+</div>
+{% endblock %}
+
+{% block custom_script %}
+    const graphJson = {"data": [{"hovertemplate": "x=%{x}<br>y=%{y}<extra></extra>", "legendgroup": "", "line": {"color": "#636efa", "dash": "solid"}, "marker": {"symbol": "circle"}, "mode": "lines", "name": "", "orientation": "v", "showlegend": false, "x": ["2025-03-01", "2025-04-01", "2025-05-01"], "xaxis": "x", "y": [44000.0, 42500.0, 43500.0], "yaxis": "y", "type": "scatter"}], "layout": {"template": {}, "xaxis": {"anchor": "y", "domain": [0.0, 1.0], "title": {"text": "\u0414\u0430\u0442\u0430"}}, "yaxis": {"anchor": "x", "domain": [0.0, 1.0], "title": {"text": "\u0421\u0442\u043e\u0438\u043c\u043e\u0441\u0442\u044c"}}, "legend": {"tracegroupgap": 0}, "title": {"text": "\u0413\u0440\u0430\u0444\u0438\u043a \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u044f \u0441\u0442\u043e\u0438\u043c\u043e\u0441\u0442\u0438 \u0436\u0438\u043b\u044c\u044f \u0432\u043e \u0432\u0440\u0435\u043c\u0435\u043d\u0438"}}};
+    Plotly.newPlot('plot', graphJson.data, graphJson.layout);
+    let building_material = document.getElementById('info-div-building-material');
+    const building_material_mapping = {
+        "old": "Старый фонд",
+        "brick": "Кирпич",
+        "monolith": "Монолит",
+        "monolithBrick": "Кирпичный монолит",
+        "panel": "Панель",
+        "block": "Блоки"
+    };
+    building_material.innerHTML = building_material_mapping["{{ home.building_material }}"] ?? "Другое";
+    let modal_object = null;
+
+    function formatTimestamp(timestamp) {
+        const date = new Date(timestamp * 1000); // Умножаем на 1000, если timestamp в секундах
+
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Месяцы в JavaScript нумеруются с 0
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+
+        return `${year}-${month}-${day} ${hours}:${minutes}`;
+    }
+
+    function openModal(ind) {
+        let similar_homes = {{ home.similar_objects | tojson(indent=2) | safe }};
+        modal_object = similar_homes[ind];
+        console.log(modal_object);
+        const modal = document.getElementById('modal-window');
+        modal.style.display = 'flex';
+        let modal_content = document.getElementById('modal-content');
+        modal_content.innerHTML = `
+            <div class="info-div-row">
+                <div class="info-div-row__item info-div-address">
+                    <h3>Адрес</h3>
+                    <div class="info-div__item">
+                        <span class="info-div__item_value">${modal_object.address}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="info-div-row">
+                <div class="info-div-row__item">
+                    <h3>Основные параметры</h3>
+                    <div class="info-div__item">
+                        <span class="info-div__item_placeholder">Общая площадь (м<sup>2</sup>)</span>
+                        <span class="info-div__item_value">${modal_object.totalArea}</span>
+                    </div>
+                    <div class="info-div__item">
+                        <span class="info-div__item_placeholder">Тип жилья</span>
+                        <span class="info-div__item_value">${modal_object.isApartments ? "Апартаменты" : (modal_object.roomsCount === 0 ? "Студия" : "Квартира")}</span>
+                    </div>
+                    <div class="info-div__item">
+                        <span class="info-div__item_placeholder">Количество комнат</span>
+                        <span class="info-div__item_value">${modal_object.roomsCount}</span>
+                    </div>
+                </div>
+                <div class="info-div-row__item">
+                    <h3>Характеристики здания</h3>
+                    <div class="info-div__item">
+                        <span class="info-div__item_placeholder">Этажей в доме</span>
+                        <span class="info-div__item_value">${modal_object.floors_count}</span>
+                    </div>
+                    <div class="info-div__item">
+                        <span class="info-div__item_placeholder">Этаж квартиры</span>
+                        <span class="info-div__item_value">${modal_object.floorNumber}</span>
+                    </div>
+                    <div class="info-div__item">
+                        <span class="info-div__item_placeholder">Материал стен</span>
+                        <span class="info-div__item_value">${modal_object.building_material}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="info-div-row">
+                <div class="info-div-row__item">
+                    <h3>Дополнительно</h3>
+                    <div class="info-div__item">
+                        <span class="info-div__item_placeholder">Количество лифтов</span>
+                        <span class="info-div__item_value">${modal_object.elevators}</span>
+                    </div>
+                    <div class="info-div__item">
+                        <span class="info-div__item_placeholder">Балконы</span>
+                        <span class="info-div__item_value">${modal_object.balconiesCount}</span>
+                    </div>
+                    <div class="info-div__item">
+                        <span class="info-div__item_placeholder">Мебель</span>
+                        <span class="info-div__item_value">${modal_object.hasFurniture ? "Есть" : "Нет"}</span>
+                    </div>
+                </div>
+                <div class="info-div-row__item info-div__another_item">
+                    <div class="predicted-price">${modal_object.price} ₽</div>
+                    <div class="compute-date">Дата сдачи: ${formatTimestamp(modal_object.addedTimestamp)}</div>
+
+                </div>
+            </div>
+        `;
+    }
+
+    function closeModal() {
+        const modal = document.getElementById('modal-window');
+        modal.style.display = 'none';
+    }
+
+    function recountHome() {
+        const response = fetch("/api/get_price", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ home_id: {{ home.id }} }),
+        })
+        .then((result) => result.json())
+        .then((response) => {
+            location.reload();
+        })
+        .catch((error) => {
+            console.log(error.message);
+        });
+    };
+
+{% endblock %}

@@ -1,13 +1,10 @@
-from typing import Optional, TYPE_CHECKING
+from typing import Optional
 from flask_login import UserMixin
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import Mapped, relationship
 from werkzeug.security import generate_password_hash, check_password_hash
 from .database import Base
-
-
-if TYPE_CHECKING:
-    from .estimated_home import EstimatedHome
+from .estimated_home import EstimatedHome
 
 
 class User(UserMixin, Base):
@@ -18,7 +15,7 @@ class User(UserMixin, Base):
     email = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
 
-    estimated_homes: Mapped[list['EstimatedHome']] = relationship(back_populates='user')
+    estimated_homes: Mapped[list['EstimatedHome']] = relationship(back_populates='user', order_by=EstimatedHome.compute_date.desc())
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)

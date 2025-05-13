@@ -15,8 +15,6 @@ class EstimatedHome(Base):
     user_id = Column(ForeignKey('user.id'), nullable=False)
     address = Column(String, nullable=False)
     total_area = Column(Float, nullable=False)
-    kitchen_area = Column(Float, nullable=False)
-    living_area = Column(Float, nullable=False)
     is_apartments = Column(Boolean, nullable=False)
     floors_count = Column(Integer, nullable=False)
     floor_number = Column(Integer, nullable=False)
@@ -28,6 +26,6 @@ class EstimatedHome(Base):
     compute_date = Column(BigInteger, nullable=False)
     computed_price = Column(Integer, nullable=False)
     similar_objects = Column(JSON, default='[]')
-    graphic = Column(JSON, default='{}')
+    graphic = Column(JSON, default='{}', nullable=False)
 
     user: Mapped['User'] = relationship(back_populates='estimated_homes')

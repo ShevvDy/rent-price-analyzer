@@ -1,19 +1,57 @@
 {% extends "base.html" %}
 
+{% block custom_styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/index_page.css') }}">{% endblock %}
 {% block title %}Авторизация{% endblock %}
 
 {% block content %}
-    <h1>Авторизация</h1>
-    <form method="POST">
-        {{ form.hidden_tag() }}
-        <p>
-            {{ form.email.label }}<br>
-            {{ form.email(size=32) }}
-        </p>
-        <p>
-            {{ form.password.label }}<br>
-            {{ form.password(size=32) }}
-        </p>
-        <p>{{ form.submit() }}</p>
-    </form>
+<div class="greeting">
+    <h1>Добро пожаловать!</h1>
+    <p>Рассчитайте реальную стоимость арендного жилья за пару кликов.
+        Наш сервис анализирует рынок и помогает арендодателям и квартиросъемщикам найти справедливую цену.</p>
+</div>
+<div class="index-div">
+    <div class="outer-login-div">
+        <div class="inner-login-div" id="login-div" hidden>
+            <p class="login__text">Вход</p>
+            <form method="POST">
+                {{ login_form.hidden_tag() }}
+                {{ login_form.email(size=40, placeholder=login_form.email.label.text, class='form__field') }}
+                {{ login_form.password(size=40, placeholder=login_form.password.label.text, class='form__field') }}
+                {{ login_form.submit(class='form__submit') }}
+                <button class="form__switch" onclick="switch_login_divs()">Нет аккаунта?</button>
+            </form>
+        </div>
+        <div class="inner-login-div" id="register-div">
+            <p class="login__text">Регистрация</p>
+            <form method="POST">
+                {{ register_form.hidden_tag() }}
+                {{ register_form.name(size=40, placeholder=register_form.name.label.text, class='form__field') }}
+                {{ register_form.surname(size=40, placeholder=register_form.surname.label.text, class='form__field') }}
+                {{ register_form.patronymic(size=40, placeholder=register_form.patronymic.label.text, class='form__field') }}
+                {{ register_form.email(size=40, placeholder=register_form.email.label.text, class='form__field') }}
+                {{ register_form.password(size=40, placeholder=register_form.password.label.text, class='form__field') }}
+                {{ register_form.password2(size=40, placeholder=register_form.password2.label.text, class='form__field') }}
+                {{ register_form.submit(class='form__submit') }}
+                <button class="form__switch"  onclick="switch_login_divs()">Уже есть аккаунт?</button>
+            </form>
+        </div>
+    </div>
+    <img class="index-img" src="{{ url_for('static', filename='index_img.png') }}" alt="Картинка">
+</div>
+{% endblock %}
+{% block custom_script %}
+    function switch_login_divs() {
+        // Получаем блоки
+        const loginDiv = document.getElementById("login-div");
+        const registerDiv = document.getElementById("register-div");
+
+        // Переключаем свойство hidden
+        if (loginDiv.hidden) {
+            loginDiv.hidden = false; // Показываем login-div
+            registerDiv.hidden = true; // Прячем register-div
+        } else {
+            loginDiv.hidden = true; // Прячем login-div
+            registerDiv.hidden = false; // Показываем register-div
+        }
+    }
 {% endblock %}

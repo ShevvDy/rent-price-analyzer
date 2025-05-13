@@ -1,0 +1,174 @@
+.outer-div {
+    display: flex;
+    flex-direction: row;
+    margin-left: 48px;
+    margin-top: 48px;
+    gap: 32px;
+}
+
+.homes-list {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 36px;
+    width: 50%;
+}
+
+.homes-list__item {
+    background: white;
+    padding: 24px 24px 16px 56px;
+    border-radius: 24px;
+    position: relative;
+}
+
+.homes-list__item::before {
+    content: url("../pin.svg");
+    position: absolute;
+    top: -10px;
+    left: -10px;
+}
+
+.row {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.homes-list__item h3 {
+    font-size: 16px;
+}
+
+.homes-list__item-price {
+    display: block;
+    color: white;
+    background: #0084FF;
+    padding: 8px 12px;
+    border-radius: 12px;
+    width: 100px;
+    text-align: center;
+    font-size: 15px;
+    margin-right: 8px;
+}
+
+.homes-list__item-info {
+    font-weight: 400;
+    font-size: 14px;
+}
+
+.homes-list__item-button {
+    outline: none;
+    cursor: pointer;
+    background: black;
+    color: white;
+    border-radius: 24px;
+    font-size: 14px;
+    line-height: 20px;
+    padding: 8px 32px;
+    margin-top: 16px;
+    box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.4);
+}
+
+.info-div {
+    background: white;
+    width: 45%;
+    color: black;
+    border-radius: 32px;
+    height: 550px;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    gap: 12px;
+}
+
+.info-div-row {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.info-div-row__item {
+    background: rgba(199, 228, 255, 0.25);
+    border-radius: 16px;
+    border: 2px solid #0084FF;
+    width: 100%;
+    padding: 8px;
+}
+
+.info-div-row__item h3 {
+    border-bottom: 3px solid #158DFC;
+    font-size: 15px;
+    padding-bottom: 4px;
+    padding-left: 8px;
+}
+
+.info-div__item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.info-div__item_placeholder {
+    font-size: 14px;
+    padding-left: 8px;
+}
+
+.info-div__item_value {
+    width: 100%;
+    background-color: white;
+    border: 1px solid rgba(0, 0, 0, 0.5);
+    height: 28px;
+    border-radius: 12px;
+    padding-left: 8px;
+}
+
+.info-div-address h3 {
+    border: none;
+}
+
+.info-div__another_item {
+    border: none;
+    background: none;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+}
+
+.predicted-price {
+    margin: auto;
+    font-size: 56px;
+    font-weight: 600;
+}
+
+.compute-date {
+    margin: 0 auto 8px;
+    font-size: 18px;
+}
+
+.info-div__buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    justify-content: space-between;
+    height: 56px;
+}
+
+.info-div__buttons button {
+    flex-grow: 1;
+    flex-basis: 10px;
+    outline: none;
+    cursor: pointer;
+    background: black;
+    color: white;
+    border-radius: 24px;
+    font-size: 14px;
+    padding: 4px;
+    box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.4);
+}
+
+.info-div__buttons button:disabled {
+    cursor: not-allowed;
+    background-color: dimgrey;
+}

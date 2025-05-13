@@ -77,10 +77,8 @@ def process_data_by_city(city: 'City') -> pd.DataFrame:
         'isApartments',
         'latitude',
         'longitude',
+        'building_material',
     ]]
-    binary_cols = ["isApartments", "hasFurniture"]
-    for col in binary_cols:
-        df_copy[col] = df_copy[col].astype(bool)
     df_copy.to_csv(f'./data/{city.short_name}/analogues_dataset.csv', index=False)
     df = df.drop(
         [
@@ -96,6 +94,9 @@ def process_data_by_city(city: 'City') -> pd.DataFrame:
             'isPremium',
             'city',
             'district',
+            'elevators',
+            'kitchenArea',
+            'livingArea',
         ],
         axis=1
     )
@@ -105,7 +106,8 @@ def process_data_by_city(city: 'City') -> pd.DataFrame:
 
 def prepare_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     df = pd.DataFrame()
-    for city in City.get_all_cities_for_model():
+    # for city in City.get_all_cities_for_model():
+    for city in City.get_all():
         cur_df = process_data_by_city(city)
         df = pd.concat([df, cur_df])
     X = df.drop("price_by_meter", axis=1)

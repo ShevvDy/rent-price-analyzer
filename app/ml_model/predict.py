@@ -39,6 +39,7 @@ def get_nearest_neighbours(city: str, addr_lat: float, addr_lon: float) -> list[
                 'price',
                 'balconiesCount',
                 'isApartments',
+                'building_material',
             ]
         }
         cur_dict['address'] = formatted_address
@@ -75,6 +76,23 @@ def get_historic_graphic_data(df: pd.DataFrame, model) -> dict:
 
 
 def get_rental_price(data: dict) -> dict:
+    estimated_home = None
+    if 'home_id' in data and data['home_id'] is not None:
+        estimated_home = EstimatedHome.get_item_by_id(data['home_id'])
+        if estimated_home.user_id != current_user.id:
+            raise Exception(f'Home {estimated_home.id} has not relation with user {current_user.email}')
+        data = {
+            'totalArea': estimated_home.total_area,
+            'isApartments': estimated_home.is_apartments,
+            'floors_count': estimated_home.floors_count,
+            'floorNumber': estimated_home.floor_number,
+            'roomsCount': estimated_home.rooms_count,
+            'building_material': estimated_home.building_material,
+            'elevators': estimated_home.elevators,
+            'balconiesCount': estimated_home.balconies_count,
+            'hasFurniture': estimated_home.has_furniture,
+            'address': estimated_home.address,
+        }
     addr_data = get_address_short_info(data['address'])
     if addr_data is None:
         raise Exception(f'Address {data["address"]} not found')
@@ -88,7 +106,7 @@ def get_rental_price(data: dict) -> dict:
 
     df = pd.DataFrame([data])
     flat_area = data["totalArea"]
-    binary_cols = ["isApartments", "hasFurniture", "has_underground_parking", 'isPremium']
+    binary_cols = ["isApartments", "hasFurniture"]
     for col in binary_cols:
         df[col] = df[col].astype(int)
 
@@ -134,29 +152,29 @@ def get_rental_price(data: dict) -> dict:
     total_price = round(prediction[0] * flat_area / 500) * 500
     similar_objects = get_nearest_neighbours(city.short_name, addr_data[2], addr_data[3])
     graph = get_historic_graphic_data(df, model)
-    estimated_home = EstimatedHome(
-        user=current_user,
-        address=get_formatted_address_by_coords(addr_data[2], addr_data[3]),
-        total_area=data['totalArea'],
-        kitchen_area=data['kitchenArea'],
-        living_area=data['livingArea'],
-        is_apartments=data['isApartments'],
-        floors_count=data['floors_count'],
-        floor_number=data['floorNumber'],
-        rooms_count=data['roomsCount'],
-        building_material=data['building_material'],
-        elevators=data['elevators'],
-        balconies_count=data['balconiesCount'],
-        has_furniture=data['hasFurniture'],
-        compute_date=round(datetime.now().timestamp()),
-        computed_price=total_price,
-        similar_objects=similar_objects,
-        graphic=json.dumps(graph),
-    )
-    estimated_home.add()
+    if estimated_home is None:
+        estimated_home = EstimatedHome(
+            user=current_user,
+            address=get_formatted_address_by_coords(addr_data[2], addr_data[3]),
+            total_area=data['totalArea'],
+            is_apartments=data['isApartments'],
+            floors_count=data['floors_count'],
+            floor_number=data['floorNumber'],
+            rooms_count=data['roomsCount'],
+            building_material=data['building_material'],
+            elevators=data['elevators'],
+            balconies_count=data['balconiesCount'],
+            has_furniture=data['hasFurniture'],
+        )
+    estimated_home.computed_price = total_price
+    estimated_home.compute_date = round(datetime.now().timestamp())
+    estimated_home.similar_objects = similar_objects
+    estimated_home.graphic = json.dumps(graph)
+    if 'home_id' in data and data['home_id'] is not None:
+        estimated_home.commit()
+    else:
+        estimated_home.add()
     return {
         'status': 'success',
-        'total_price': total_price,
-        'nearest_neighbours': similar_objects,
-        'graph': graph
+        'home_id': estimated_home.id,
     }

@@ -25,7 +25,7 @@ def get_address_short_info(address: str) -> tuple[str, str, float, float] | None
 
 def get_address_suggestions(query: str) -> list[str]:
     result = dadata_.suggest("address", query)
-    return sorted(list(set([s['value'].split(' стр ')[0] for s in result])))
+    return sorted(list(set([s['value'].split(' стр ')[0] for s in result]))[:5])
 
 def get_formatted_address_by_coords(latitude: float, longitude: float) -> str | None:
     try:
@@ -42,6 +42,8 @@ def get_formatted_address_by_coords(latitude: float, longitude: float) -> str | 
             )
             district = district or suggestion.get('city_district')
         address_formers = [suggestion.get('city') or suggestion.get('region'), district, suggestion.get('street_with_type'), suggestion.get('house')]
+        if suggestion.get('block'):
+            address_formers.append(f"{suggestion.get('block_type')}{suggestion.get('block').split(' стр ')[0]}")
     except:
         addr = geolocator.geocode(f"{latitude}, {longitude}", addressdetails=True)
         if not addr or not addr.raw:
