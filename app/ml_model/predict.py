@@ -1,12 +1,15 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
+import json
 import joblib
 import pandas as pd
+import plotly.express as px
 import numpy as np
+from flask_login import current_user
 
-from ..models import City
+from ..models import City, EstimatedHome
 from ..util.geo_objects import haversine, add_distances_to_geo_objects, find_nearest_metro, get_metro_df_by_city, get_metro_data_by_city
-from ..util.address import get_address_short_info, dadata_, geolocator
+from ..util.address import get_address_short_info, get_formatted_address_by_coords
 
 
 def get_nearest_neighbours(city: str, addr_lat: float, addr_lon: float) -> list[dict]:
@@ -19,37 +22,9 @@ def get_nearest_neighbours(city: str, addr_lat: float, addr_lon: float) -> list[
     for idx, row in df.iterrows():
         if len(nearest) == 3 or row['distances'] > 0.005:
             break
-        try:
-            addr = dadata_.geolocate('address', lat=row['latitude'], lon=row['longitude'])
-            suggestion = addr['suggestions']['data']
-            if not suggestion['street'] or not suggestion['house']:
-                raise Exception
-            district = addr['settlement']
-            if district is None:
-                nominatim_addr = geolocator.geocode(f"{row['latitude']}, {row['longitude']}", addressdetails=True)
-                raw_addr = nominatim_addr.raw['address']
-                district = (
-                    raw_addr['city_district'].replace('округ', '').strip() if 'city_district' in raw_addr else None
-                )
-                district = district or addr.get('city_district')
-            address_formers = [addr.get('city') or addr.get('region'), district, addr.get('street'), addr.get('house')]
-        except:
-            addr = geolocator.geocode(f"{row['latitude']}, {row['longitude']}", addressdetails=True)
-            if not addr or not addr.raw:
-                continue
-            raw_addr = addr.raw['address']
-            try:
-                settlement = raw_addr.get('town')
-                if not settlement:
-                    city_district = (
-                        raw_addr['city_district'].replace('округ', '').strip() if 'city_district' in raw_addr else None
-                    )
-                    if not city_district:
-                        raise Exception
-                    settlement = city_district
-                address_formers = [raw_addr['state'], settlement, raw_addr['road'], raw_addr['house_number']]
-            except:
-                continue
+        formatted_address = get_formatted_address_by_coords(row['latitude'], row['longitude'])
+        if formatted_address is None:
+            continue
         cur_dict = {
             field: row[field] for field in [
                 'kitchenArea',
@@ -64,13 +39,60 @@ def get_nearest_neighbours(city: str, addr_lat: float, addr_lon: float) -> list[
                 'price',
                 'balconiesCount',
                 'isApartments',
+                'building_material',
             ]
         }
-        cur_dict['address'] = ', '.join(address_formers)
+        cur_dict['address'] = formatted_address
         nearest.append(cur_dict)
     return nearest
 
+def get_historic_graphic_data(df: pd.DataFrame, model) -> dict:
+    df_copy = df.copy()
+    cur_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+    # clean_dataset = pd.read_csv('./data/spb/clean_dataset.csv')
+    # clean_min_date = datetime.fromtimestamp(clean_dataset['addedTimestamp'].min()).replace(
+    #     hour=0, minute=0, second=0, microsecond=0, tzinfo=None
+    # )
+    # start_date = max(cur_date - timedelta(days=180), clean_min_date)
+    start_date = datetime(year=2025, month=3, day=1)
+    dates = []
+    while start_date <= cur_date:
+        dates.append(round(start_date.timestamp()))
+        start_date += timedelta(days=1)
+    df_copy = pd.concat([df_copy] * len(dates), ignore_index=True)
+    df_copy['addedTimestamp'] = dates
+    df_copy['predicted'] = model.predict(df_copy)
+    df_copy['total_price'] = df_copy['predicted'] * df_copy['totalArea']
+    df_copy['add_date'] = df_copy.apply(lambda x: datetime.fromtimestamp(x['addedTimestamp']).replace(day=1), axis=1)
+    result = np.round(df_copy.groupby('add_date')['total_price'].mean() / 500) * 500
+    fig = px.line(x=result.index, y=result.values, title='График изменения стоимости жилья во времени')
+    fig.update_layout(template=None)
+    graph_json = fig.to_dict()
+    graph_json['data'][0]['x'] = [ts.strftime("%Y-%m-%d") for ts in result.index.tolist()]
+    graph_json['data'][0]['y'] = result.values.tolist()
+    graph_json['layout']['xaxis']['title']['text'] = 'Дата'
+    graph_json['layout']['yaxis']['title']['text'] = 'Стоимость'
+    return graph_json
+
+
 def get_rental_price(data: dict) -> dict:
+    estimated_home = None
+    if 'home_id' in data and data['home_id'] is not None:
+        estimated_home = EstimatedHome.get_item_by_id(data['home_id'])
+        if estimated_home.user_id != current_user.id:
+            raise Exception(f'Home {estimated_home.id} has not relation with user {current_user.email}')
+        data = {
+            'totalArea': estimated_home.total_area,
+            'isApartments': estimated_home.is_apartments,
+            'floors_count': estimated_home.floors_count,
+            'floorNumber': estimated_home.floor_number,
+            'roomsCount': estimated_home.rooms_count,
+            'building_material': estimated_home.building_material,
+            'elevators': estimated_home.elevators,
+            'balconiesCount': estimated_home.balconies_count,
+            'hasFurniture': estimated_home.has_furniture,
+            'address': estimated_home.address,
+        }
     addr_data = get_address_short_info(data['address'])
     if addr_data is None:
         raise Exception(f'Address {data["address"]} not found')
@@ -80,11 +102,11 @@ def get_rental_price(data: dict) -> dict:
     data['city_district'] = f"{addr_data[0]}, {addr_data[1]}"
     data['latitude'] = addr_data[2]
     data['longitude'] = addr_data[3]
-    data['addedTimestamp'] = datetime.now().timestamp()
+    data['addedTimestamp'] = round(datetime.now().timestamp())
 
     df = pd.DataFrame([data])
     flat_area = data["totalArea"]
-    binary_cols = ["isApartments", "hasFurniture", "has_underground_parking", 'isPremium']
+    binary_cols = ["isApartments", "hasFurniture"]
     for col in binary_cols:
         df[col] = df[col].astype(int)
 
@@ -127,9 +149,32 @@ def get_rental_price(data: dict) -> dict:
     X_train = joblib.load("./data/model/x_train_data.pkl")
     df = df[X_train.columns]
     prediction = model.predict(df)
+    total_price = round(prediction[0] * flat_area / 500) * 500
+    similar_objects = get_nearest_neighbours(city.short_name, addr_data[2], addr_data[3])
+    graph = get_historic_graphic_data(df, model)
+    if estimated_home is None:
+        estimated_home = EstimatedHome(
+            user=current_user,
+            address=get_formatted_address_by_coords(addr_data[2], addr_data[3]),
+            total_area=data['totalArea'],
+            is_apartments=data['isApartments'],
+            floors_count=data['floors_count'],
+            floor_number=data['floorNumber'],
+            rooms_count=data['roomsCount'],
+            building_material=data['building_material'],
+            elevators=data['elevators'],
+            balconies_count=data['balconiesCount'],
+            has_furniture=data['hasFurniture'],
+        )
+    estimated_home.computed_price = total_price
+    estimated_home.compute_date = round(datetime.now().timestamp())
+    estimated_home.similar_objects = similar_objects
+    estimated_home.graphic = json.dumps(graph)
+    if 'home_id' in data and data['home_id'] is not None:
+        estimated_home.commit()
+    else:
+        estimated_home.add()
     return {
         'status': 'success',
-        'price_by_meter': float(prediction[0]),
-        'total_price': round(prediction[0] * flat_area / 500) * 500,
-        'nearest_neighbours': get_nearest_neighbours(city.short_name, addr_data[2], addr_data[3]),
+        'home_id': estimated_home.id,
     }

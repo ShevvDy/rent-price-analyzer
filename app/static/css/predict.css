@@ -1,0 +1,128 @@
+.info-div {
+    background: white;
+    width: fit-content;
+    color: black;
+    border-radius: 32px;
+    height: fit-content;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 24px;
+    gap: 20px;
+    margin: 20px auto;
+}
+
+.info-div h1 {
+    font-size: 24px;
+    margin: 0 auto 4px;
+}
+
+.info-div-row {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    width: 900px;
+    margin: 0 auto;
+}
+
+.info-div-row__item {
+    background: rgba(199, 228, 255, 0.25);
+    border-radius: 16px;
+    border: 2px solid #0084FF;
+    width: 100%;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.info-div-row__item h3 {
+    border-bottom: 3px solid #158DFC;
+    font-size: 18px;
+    padding-bottom: 4px;
+    padding-left: 8px;
+    margin-bottom: 8px;
+}
+
+#info-div-first-h3 {
+    margin-bottom: 4px;
+}
+
+.info-div__item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    position: relative;
+}
+
+.info-div__item_placeholder {
+    font-size: 16px;
+    padding-left: 8px;
+}
+
+.info-div__item_value {
+    width: 100%;
+    background-color: white;
+    border: 1px solid rgba(0, 0, 0, 0.5);
+    height: 32px;
+    border-radius: 12px;
+    padding-left: 8px;
+    font-size: 16px;
+}
+
+.info-div-address h3 {
+    border: none;
+}
+
+.info-div button {
+    outline: none;
+    cursor: pointer;
+    background: black;
+    color: white;
+    border-radius: 24px;
+    font-size: 20px;
+    padding: 20px 4px;
+    box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.4);
+    width: 50%;
+    margin: 8px auto 0;
+}
+
+.info-div button:disabled {
+    cursor: not-allowed;
+    background-color: dimgrey;
+}
+
+.info-div__item_value:disabled {
+    cursor: not-allowed;
+    background-color: lightgrey;
+}
+
+.suggestions-dropdown {
+    position: absolute;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: overlay;
+    background: white;
+    border: 2px solid #ddd;
+    border-top: none;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    display: none;
+    z-index: 1000;
+    top: 32px;
+}
+
+.suggestion-item {
+    padding: 4px 4px 4px 12px;
+    border-bottom: 1px solid black;
+    cursor: pointer;
+}
+
+.suggestion-item:hover {
+    background-color: #41A4FF;
+    color: white;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.suggestion-item:last-of-type {
+    border-bottom: none;
+}

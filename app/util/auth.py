@@ -9,7 +9,7 @@ def init_login_manager() -> LoginManager:
     from ..models import User
 
     login_manager = LoginManager()
-    login_manager.login_view = 'login'
+    login_manager.login_view = 'login_view'
 
     @login_manager.user_loader
     def load_user(user_id: str) -> Optional[User]:
@@ -21,7 +21,7 @@ def init_login_manager() -> LoginManager:
 class LoginForm(FlaskForm):
     email = EmailField('Эл. почта', validators=[DataRequired(), Email()])
     password = PasswordField('Пароль', validators=[DataRequired()])
-    submit = SubmitField('Авторизоваться')
+    submit = SubmitField('Войти')
 
 
 class RegistrationForm(FlaskForm):

@@ -3,11 +3,8 @@ from pydantic import BaseModel, root_validator
 
 class Data(BaseModel):
     totalArea: float
-    livingArea: float
-    kitchenArea: float
     isApartments: bool = False
     flatType: str # flat, studio, apartments
-    has_underground_parking: bool
     floors_count: int
     floorNumber: int
     roomsCount: int
@@ -15,8 +12,8 @@ class Data(BaseModel):
     elevators: int
     balconiesCount: int
     hasFurniture: bool
-    isPremium: bool
     address: str
+    home_id: int | None = None
 
     @root_validator(pre=True)
     def validate_flat_type(cls, values: dict):
@@ -31,6 +28,6 @@ class Data(BaseModel):
                 values['roomsCount'] = 0
         elif flat_type == "flat":
             values["isApartments"] = False
-        else:
+        elif values.get('home_id') is None:
             raise ValueError("Недопустимое значение flatType.")
         return values

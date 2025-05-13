@@ -19,7 +19,7 @@ class City(Base):
     center_lon = Column(Float, nullable=False)
     is_in_model = Column(Boolean, default=False)
 
-    metro_stations: Mapped[list['MetroStation']] = relationship(uselist=True, back_populates='city', lazy='selectin')
+    metro_stations: Mapped[list['MetroStation']] = relationship(back_populates='city', lazy='selectin')
 
     @classmethod
     def get_all_cities_for_model(cls) -> list['City']:

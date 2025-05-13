@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block custom_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/lk.css') }}">
+{% endblock %}
+
+{% block title %}Личный кабинет{% endblock %}
+
+{% block content %}
+<div class="outer-div">
+<div class="homes-list">
+    {% for home in estimated_homes %}
+        <div class="homes-list__item">
+            <div class="row">
+                <h3>{{ home.address }}</h3>
+                <span class="homes-list__item-price">{{ home.computed_price }} ₽</span>
+            </div>
+            <div class="row">
+                <span class="homes-list__item-info">
+                    {% if home.rooms_count == 0 %}
+                        Студия
+                    {% else %}
+                        {{ home.rooms_count }} комн.
+                    {% endif %}
+                </span>
+                <span class="homes-list__item-info">{{ home.total_area }} м<sup>2</sup></span>
+                <button class="homes-list__item-button" onclick="get_more_info({{ home.id }})">Подробнее</button>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+<div class="info-div">
+    <div class="info-div-row">
+        <div class="info-div-row__item info-div-address">
+            <h3>Адрес</h3>
+            <div class="info-div__item">
+                <span class="info-div__item_value" id="info-div-address"></span>
+            </div>
+        </div>
+    </div>
+    <div class="info-div-row">
+        <div class="info-div-row__item">
+            <h3>Основные параметры</h3>
+            <div class="info-div__item">
+                <span class="info-div__item_placeholder">Общая площадь (м<sup>2</sup>)</span>
+                <span class="info-div__item_value" id="info-div-total-area"></span>
+            </div>
+            <div class="info-div__item">
+                <span class="info-div__item_placeholder">Тип жилья</span>
+                <span class="info-div__item_value" id="info-div-type"></span>
+            </div>
+            <div class="info-div__item">
+                <span class="info-div__item_placeholder">Количество комнат</span>
+                <span class="info-div__item_value" id="info-div-rooms"></span>
+            </div>
+        </div>
+        <div class="info-div-row__item">
+            <h3>Характеристики здания</h3>
+            <div class="info-div__item">
+                <span class="info-div__item_placeholder">Этажей в доме</span>
+                <span class="info-div__item_value" id="info-div-floors-count"></span>
+            </div>
+            <div class="info-div__item">
+                <span class="info-div__item_placeholder">Этаж квартиры</span>
+                <span class="info-div__item_value" id="info-div-floor-number"></span>
+            </div>
+            <div class="info-div__item">
+                <span class="info-div__item_placeholder">Материал стен</span>
+                <span class="info-div__item_value" id="info-div-building-material"></span>
+            </div>
+        </div>
+    </div>
+    <div class="info-div-row">
+        <div class="info-div-row__item">
+            <h3>Дополнительно</h3>
+            <div class="info-div__item">
+                <span class="info-div__item_placeholder">Количество лифтов</span>
+                <span class="info-div__item_value" id="info-div-elevators"></span>
+            </div>
+            <div class="info-div__item">
+                <span class="info-div__item_placeholder">Балконы</span>
+                <span class="info-div__item_value" id="info-div-balconies"></span>
+            </div>
+            <div class="info-div__item">
+                <span class="info-div__item_placeholder">Мебель</span>
+                <span class="info-div__item_value" id="info-div-furniture"></span>
+            </div>
+        </div>
+        <div class="info-div-row__item info-div__another_item">
+            <div class="predicted-price" id="info-div-price"></div>
+            <div class="compute-date" id="info-div-date"></div>
+            <div class="info-div__buttons">
+                <button disabled id="info-div__button_recount">Рассчитать повторно</button>
+                <button disabled id="info-div__button_more">К странице анализа</button>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}
+
+{% block custom_script %}
+    function formatTimestamp(timestamp) {
+        const date = new Date(timestamp * 1000); // Умножаем на 1000, если timestamp в секундах
+
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Месяцы в JavaScript нумеруются с 0
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+
+        return `${year}-${month}-${day} ${hours}:${minutes}`;
+    }
+
+    function get_more_info(item_id) {
+        let homes = {
+            {% for home in estimated_homes %}
+                {{ home.id }}: {
+                    "address": "{{ home.address }}",
+                    "total_area": {{ home.total_area }},
+                    "is_apartments": {{ "true" if home.is_apartments else "false" }},
+                    "floors_count": {{ home.floors_count }},
+                    "floor_number": {{ home.floor_number }},
+                    "rooms_count": {{ home.rooms_count }},
+                    "building_material": "{{ home.building_material }}",
+                    "elevators": {{ home.elevators }},
+                    "balconies_count": {{ home.balconies_count }},
+                    "has_furniture": {{ "true" if home.has_furniture else "false" }},
+                    "compute_date": "{{ home.compute_date }}",
+                    "computed_price": {{ home.computed_price }}
+                },
+            {% endfor %}
+        };
+        const current_item = homes[item_id];
+
+        const span_address = document.getElementById('info-div-address');
+        span_address.innerHTML = current_item.address;
+        const span_area = document.getElementById('info-div-total-area');
+        span_area.innerHTML = current_item.total_area;
+        const span_type = document.getElementById('info-div-type');
+        span_type.innerHTML = current_item.is_apartments ? "Апартаменты" : (current_item.rooms_count === 0 ? "Студия" : "Квартира");
+        const span_rooms = document.getElementById('info-div-rooms');
+        span_rooms.innerHTML = current_item.rooms_count;
+        const span_floors_count = document.getElementById('info-div-floors-count');
+        span_floors_count.innerHTML = current_item.floors_count;
+        const span_floor_number = document.getElementById('info-div-floor-number');
+        span_floor_number.innerHTML = current_item.floor_number;
+        const span_building_material = document.getElementById('info-div-building-material');
+        const building_material_mapping = {
+            "old": "Старый фонд",
+            "brick": "Кирпич",
+            "monolith": "Монолит",
+            "monolithBrick": "Кирпичный монолит",
+            "panel": "Панель",
+            "block": "Блоки"
+        };
+        span_building_material.innerHTML = building_material_mapping[current_item.building_material] ?? "Другое";
+        const span_elevators = document.getElementById('info-div-elevators');
+        span_elevators.innerHTML = current_item.elevators;
+        const span_balconies = document.getElementById('info-div-balconies');
+        span_balconies.innerHTML = current_item.balconies_count;
+        const span_furniture = document.getElementById('info-div-furniture');
+        span_furniture.innerHTML = current_item.has_furniture ? "Есть" : "Нет";
+        const span_price = document.getElementById('info-div-price');
+        span_price.innerHTML = current_item.computed_price + " ₽";
+        const span_date = document.getElementById('info-div-date');
+        span_date.innerHTML = "Дата расчета: " + formatTimestamp(current_item.compute_date);
+        const button_recount = document.getElementById('info-div__button_recount');
+        button_recount.onclick = () => {
+            const response = fetch("/api/get_price", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({home_id: item_id}),
+            })
+            .then((result) => result.json())
+            .then((response) => {
+                window.location.href = "/estimated/" + response.home_id;
+            })
+            .catch((error) => {
+                console.log(error.message);
+            });
+        };
+        button_recount.disabled = false;
+        const button_more = document.getElementById('info-div__button_more');
+        button_more.onclick = () => {window.location.href=`/estimated/${item_id}`};
+        button_more.disabled = false;
+    }
+
+{% endblock %}

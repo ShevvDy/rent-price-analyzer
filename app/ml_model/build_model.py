@@ -4,8 +4,8 @@ from xgboost import XGBRegressor
 
 
 def build_models() -> None:
-    X_train, X_test, Y_train, Y_test = [
-        joblib.load(f"./data/model/{obj_name}_data.pkl") for obj_name in ["x_train", "x_test", "y_train", "y_test"]
+    X_train, Y_train = [
+        joblib.load(f"./data/model/{obj_name}_data.pkl") for obj_name in ["x_train", "y_train"]
     ]
 
     rf = RandomForestRegressor(

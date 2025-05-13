@@ -1,0 +1,120 @@
+.greeting {
+    background: white;
+    border-radius: 24px;
+    padding: 24px 132px 64px 44px;
+    margin: 32px 0 0 80px;
+    width: 65%;
+    position: relative;
+}
+
+.greeting::before {
+    content: url("../pin.svg");
+    position: absolute;
+    top: -10px;
+    left: -10px;
+}
+
+.greeting::after {
+    content: url("../pin.svg");
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    transform: rotate(90deg);
+}
+
+.greeting h1 {
+    font-size: 16px;
+    line-height: 20px;
+    color: #158DFC;
+    font-weight: 500;
+}
+
+.greeting p {
+    letter-spacing: 0.1em;
+    font-size: 14px;
+    line-height: 18px;
+    color: black;
+    font-weight: 400;
+}
+
+.index-div {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    position: relative;
+}
+
+.outer-login-div {
+    margin-top: -24px;
+    margin-left: 140px;
+    background: #0084FF;
+    color: #FFFFFF;
+    display: flex;
+    justify-content: center;
+    align-content: center;
+    border-radius:35px;
+    width: fit-content;
+    box-shadow: 0 4px 22px 0 rgba(0, 0, 0, 0.4);
+}
+
+.index-div img {
+    margin-left: 132px;
+    margin-top: -48px;
+    box-shadow: 0 4px 17px 7px rgba(120, 163, 202, 1);
+    border-top: 12px solid #158DFC;
+}
+
+.inner-login-div {
+    text-align: center;
+    padding: 16px 32px;
+}
+
+.inner-login-div form {
+    display: flex;
+    flex-direction: column;
+}
+
+.login__text {
+    font-size: 20px;
+    margin-bottom: 20px;
+}
+
+.form__field {
+    background-color: #6CB5FF;
+    border: none;
+    border-radius: 16px;
+    color: white;
+    font-size: 14px;
+    line-height: 18px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    outline: none;
+}
+
+.form__field::placeholder {
+    color: white;
+}
+
+.form__submit {
+    background-color: black;
+    color: white;
+    border: none;
+    border-radius: 16px;
+    font-size: 13px;
+    padding: 8px 0;
+    display: block;
+    width: 240px;
+    margin: 8px auto;
+    cursor: pointer;
+    box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.4);
+}
+
+.form__switch {
+    border: none;
+    font-size: 13px;
+    display: block;
+    margin: 8px auto 4px;
+    color: white;
+    background: none;
+    cursor: pointer;
+}
